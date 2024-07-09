@@ -102,29 +102,61 @@ parse_line(Parser* parser)
   switch (c) {
   case '\n': return parse_newline(parser);
   case '#': return parse_heading(parser);
-  default: return NULL;
+  default: return parse_text(parser);
   }
   return node;
+}
+
+Node*
+parse(Parser* parser)
+{
+  size_t children_count = 0;
+  size_t capacity = 10;
+  Node** children = malloc(sizeof(Node) * capacity);
+
+  Node* node;
+  for (;;) {
+    node = parse_line(parser);
+    if (NULL == node) {
+      break;
+    }
+    if (children_count >= capacity) {
+      capacity *= 2;
+      children = realloc(children, sizeof(Node*) * capacity);
+    }
+    children[children_count] = node;
+    children_count += 1;
+  }
+
+  Node* root = malloc(sizeof(Node));
+  root->type = ROOT;
+  root->children_count = children_count;
+  root->children = children;
+  return root;
 }
 
 int
 main()
 {
-  char* source = "# Hello, world!\n\nThis is text\n\n## Something";
+  char* source = "# Hello, world!\n\nThis is text\n\n## Something hello\n";
   Parser parser = { .source = source, .idx = 0 };
-  Node* node = parse_line(&parser);
+  Node* root = parse(&parser);
 
-  if (HEADING == node->type) {
-    Node* text_node = node->children[0];
-    TextData* text = text_node->value;
-    printf("heading lvl %d: '", *((uint8_t*) node->value));
+  size_t i;
+  for (i = 0; i < root->children_count; i++) {
+    Node* node = root->children[i];
+    if (HEADING == node->type) {
+      Node* text_node = node->children[0];
+      TextData* text = text_node->value;
+      printf("heading lvl %d: '", *((uint8_t*) node->value));
 
-    int i;
-    for (i = 0; i < text->length; i++) {
-      putchar(*(text->text + i));
+      int j;
+      for (j = 0; j < text->length; j++) {
+        putchar(*(text->text + j));
+      }
+      printf("'\n");
     }
-    printf("'\n");
   }
-
-  free_node(node);
+  
+  free_node(root);
 }
