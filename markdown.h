@@ -9,14 +9,17 @@ typedef enum {
   NEWLINE
 } NodeType;
 
-typedef struct {
+typedef struct Node {
   NodeType type;
   void* value;
   size_t children_count;
-  void* children;
+  struct Node** children;
 } Node;
 
 typedef struct {
   char* text;
   size_t length;
 } TextData;
+
+void
+free_node(Node* node);

@@ -9,8 +9,23 @@ typedef struct {
   size_t idx;
 } Parser;
 
+void
+free_node(Node* node)
+{
+  free(node->value);
+
+  int i;
+  for (i = 0; i < node->children_count; i++) {
+    free_node(node->children[i]);
+  }
+
+  free(node->children);
+  free(node);
+}
+
 Node*
-parse_newline(Parser* parser) {
+parse_newline(Parser* parser)
+{
   Node* node = malloc(sizeof(Node));
   node->type = NEWLINE;
   
@@ -71,7 +86,8 @@ parse_heading(Parser* parser)
   node->type = HEADING;
   node->value = level;
   node->children_count = 1;
-  node->children = text;
+  node->children = malloc(sizeof(void*));
+  node->children[0] = text;
   return node;
 }
 
@@ -99,7 +115,7 @@ main()
   Node* node = parse_line(&parser);
 
   if (HEADING == node->type) {
-    Node* text_node = node->children;
+    Node* text_node = node->children[0];
     TextData* text = text_node->value;
     printf("heading lvl %d: '", *((uint8_t*) node->value));
 
@@ -109,4 +125,6 @@ main()
     }
     printf("'\n");
   }
+
+  free_node(node);
 }
