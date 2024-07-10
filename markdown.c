@@ -10,6 +10,35 @@ typedef struct {
   size_t idx;
 } Parser;
 
+typedef struct {
+  size_t capacity;
+  size_t length;
+  Node** nodes;
+} NodeVec;
+
+NodeVec*
+new_nodevec(size_t capacity)
+{
+  NodeVec* vec = malloc(sizeof(NodeVec));
+  vec->capacity = capacity;
+  vec->length = 0;
+  vec->nodes = malloc(sizeof(void*) * vec->capacity);
+  return vec;
+}
+
+void
+push(NodeVec* vec, Node* node)
+{
+  size_t new_length = vec->length + 1;
+  if (new_length >= vec->capacity) {
+    vec->capacity *= 2;
+    vec->nodes = realloc(vec->nodes, sizeof(void*) * vec->capacity);
+  }
+
+  vec->nodes[vec->length] = node;
+  vec->length += 1;
+}
+
 void
 free_node(Node* node)
 {
@@ -133,9 +162,7 @@ end_href_loop:
 Node*
 parse_unordered_list(Parser* parser)
 {
-  size_t children_count = 0;
-  size_t children_capacity = 4;
-  Node** children = malloc(sizeof(void*) * children_capacity);
+  NodeVec* vec = new_nodevec(4);
 
   for(;;) {
     char c = parser->source[parser->idx];
@@ -143,11 +170,6 @@ parse_unordered_list(Parser* parser)
       break;
     parser->idx += 1;
     skip_whitespace(parser);
-
-    if (children_count >= children_capacity) {
-      children_capacity *= 2;
-      children = realloc(children, children_capacity);
-    }
 
     size_t line_start = parser->idx;
     for (;;) {
@@ -160,15 +182,15 @@ parse_unordered_list(Parser* parser)
       }
     }
 
-    children[children_count] = create_text_node(parser, line_start, parser->idx - 1);
-    children_count += 1;
+    push(vec, create_text_node(parser, line_start, parser->idx - 1));
   }
 
   Node* node = malloc(sizeof(Node));
   node->type = UNORDERED_LIST;
-  node->children_count = children_count;
-  node->children = children;
+  node->children_count = vec->length;
+  node->children = vec->nodes;
 
+  free(vec);
   return node;
 }
 
@@ -238,9 +260,7 @@ parse_line(Parser* parser)
 Node*
 parse(Parser* parser)
 {
-  size_t children_count = 0;
-  size_t capacity = 10;
-  Node** children = malloc(sizeof(Node) * capacity);
+  NodeVec* vec = new_nodevec(8);
 
   Node* node;
   for (;;) {
@@ -248,18 +268,15 @@ parse(Parser* parser)
     if (NULL == node) {
       break;
     }
-    if (children_count >= capacity) {
-      capacity *= 2;
-      children = realloc(children, sizeof(Node*) * capacity);
-    }
-    children[children_count] = node;
-    children_count += 1;
+    push(vec, node);
   }
 
   Node* root = malloc(sizeof(Node));
   root->type = ROOT;
-  root->children_count = children_count;
-  root->children = children;
+  root->children_count = vec->length;
+  root->children = vec->nodes;
+
+  free(vec);
   return root;
 }
 
