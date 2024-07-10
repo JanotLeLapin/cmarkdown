@@ -74,7 +74,7 @@ compile_node(Node* node)
     break;
   }
   case LINK:
-    push_string(string, "<a href=\"");
+    push_string(string, "<a target=\"_blank\" href=\"");
     push_string(string, from_text_data(node->value));
     push_string(string, "\">");
     for (i = 0; i < node->children_count; i++) {
