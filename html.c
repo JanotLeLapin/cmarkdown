@@ -53,6 +53,7 @@ from_text_data(TextData* data)
   for (i = 0; i < data->length; i++) {
     str[i] = data->text[i];
   }
+  str[data->length] = '\0';
 
   return str;
 }
