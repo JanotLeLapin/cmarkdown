@@ -54,13 +54,37 @@ compile_node(Node* node)
   String* string = new_string(32);
   int i;
   switch (node->type) {
-  case ROOT:
+  case ROOT: {
+    String* contents = new_string(32);
+    push_string(contents, "<nav class=\"contents\"><h3>Table of contents</h3><ul>");
     push_string(string, "<!DOCTYPE HTML><body>");
     for (i = 0; i < node->children_count; i++) {
-      push_string(string, compile_node(node->children[i]));
+      Node* child = node->children[i];
+      if (HEADING == child->type) {
+        push_string(contents, "<li class=\"contents-item-");
+        char heading_level[2];
+        snprintf(heading_level, sizeof(heading_level), "%d", *((uint8_t*) child->value));
+        push_string(contents, heading_level);
+        push_string(contents, "\">");
+        int j;
+        for (j = 0; j < child->children_count; j++) {
+          push_string(contents, compile_node(child->children[j]));
+        }
+        push_string(contents, "</li>");
+      }
+      push_string(string, compile_node(child));
     }
+    push_string(contents, "</ul></nav>");
+
+    char* contents_str = contents->value;
+    free(contents);
+
+    push_string(string, contents_str);
+    free(contents_str);
+
     push_string(string, "</body>");
     break;
+  }
   case HEADING: {
     char heading_tag[4];
     snprintf(heading_tag, sizeof(heading_tag), "h%d>", *((uint8_t*) node->value));
