@@ -1,7 +1,6 @@
 #include "markdown.h"
 
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,6 +11,18 @@ typedef struct {
   size_t capacity;
   char* value;
 } String;
+
+typedef struct {
+  uint8_t level;
+  char* text;
+  char* id;
+} Heading;
+
+typedef struct {
+  String* string;
+  size_t heading_count;
+  Heading** headings;
+} HtmlCompiler;
 
 String*
 new_string(size_t capacity)
@@ -39,10 +50,33 @@ push_string(String* string, char* value)
 }
 
 void
-push_string_free(String* string, char* value)
+push_char(String* string, char value)
 {
-  push_string(string, value);
-  free(value);
+  size_t new_len = string->length + 1;
+  if (new_len >= string->capacity) {
+    string->capacity = new_len * 2;
+    string->value = realloc(string->value, string->capacity);
+  }
+
+  string->value[string->length] = value;
+  string->length = new_len;
+  string->value[string->length] = '\0';
+}
+
+void
+free_heading(Heading* heading)
+{
+  free(heading->id);
+  free(heading->text);
+  free(heading);
+}
+
+void
+free_compiler(HtmlCompiler* compiler)
+{
+  free(compiler->string);
+  free(compiler->headings);
+  free(compiler);
 }
 
 char*
@@ -58,84 +92,108 @@ from_text_data(TextData* data)
   return str;
 }
 
+void
+compile(HtmlCompiler* compiler, Node* node)
+{
+  String* s = compiler->string;
+
+  size_t i = 0;
+  switch (node->type) {
+  case ROOT:
+    while (i < node->children_count) {
+      compile(compiler, node->children[i]);
+      i++;
+    }
+    break;
+  case HEADING: {
+    int level = *(uint8_t*) node->value;
+    size_t j = compiler->heading_count;
+    Heading* heading = malloc(sizeof(Heading));
+    heading->id = malloc(3);
+    heading->id[0] = 'h';
+    heading->id[1] = '0' + j;
+    heading->id[2] = '\0';
+    heading->level = level;
+    heading->text = malloc(3);
+    heading->text[0] = 'H';
+    heading->text[1] = 'i';
+    heading->text[2] = '\0';
+    compiler->headings[j] = heading;
+    compiler->heading_count += 1;
+    push_string(s, "<h");
+    push_char(s, '0' + level);
+    push_string(s, " id=\"");
+    push_string(s, heading->id);
+    push_string(s, "\">");
+    while (i < node->children_count) {
+      compile(compiler, node->children[i]);
+      i += 1;
+    }
+    push_string(s, "</h");
+    push_char(s, '0' + level);
+    push_char(s, '>');
+    break;
+  }
+  case LINK: {
+    char* url = from_text_data(node->value);
+    push_string(s, "<a href=\"");
+    push_string(s, url);
+    push_string(s, "\">");
+    free(url);
+    while (i < node->children_count) {
+      compile(compiler, node->children[i]);
+      i += 1;
+    }
+    push_string(s, "</a>");
+    break;
+  }
+  case UNORDERED_LIST:
+    push_string(s, "<ul>");
+    while (i < node->children_count) {
+      push_string(s, "<li>");
+      compile(compiler, node->children[i]);
+      push_string(s, "</li>");
+      i += 1;
+    }
+    push_string(s, "</ul>");
+    break;
+  case TEXT: {
+    char* text = from_text_data(node->value);
+    push_string(s, text);
+    free(text);
+    break;
+  }
+  case NEWLINE:
+    push_string(s, "<br>");
+  }
+}
+
 char* 
 compile_node(Node* node)
 {
-  String* string = new_string(32);
-  int i;
-  switch (node->type) {
-  case ROOT: {
-    String* contents = new_string(32);
-    push_string(contents, "<nav class=\"contents\"><h3>");
-    push_string(contents, TOC_TITLE);
-    push_string(contents, "</h3><ul>");
-    push_string(string, "<!DOCTYPE HTML><body>");
-    for (i = 0; i < node->children_count; i++) {
-      Node* child = node->children[i];
-      if (HEADING == child->type) {
-        push_string(contents, "<li class=\"contents-item-");
-        char heading_level[2];
-        snprintf(heading_level, sizeof(heading_level), "%d", *((uint8_t*) child->value));
-        push_string(contents, heading_level);
-        push_string(contents, "\">");
-        int j;
-        for (j = 0; j < child->children_count; j++) {
-          push_string_free(contents, compile_node(child->children[j]));
-        }
-        push_string(contents, "</li>");
-      }
-      push_string_free(string, compile_node(child));
-    }
-    push_string(contents, "</ul></nav>");
+  String* s = new_string(32);
+  HtmlCompiler* compiler = malloc(sizeof(HtmlCompiler));
+  compiler->string = s;
+  compiler->heading_count = 0;
+  compiler->headings = malloc(sizeof(Heading) * 32);
 
-    char* contents_str = contents->value;
-    free(contents);
-
-    push_string(string, contents_str);
-    free(contents_str);
-
-    push_string(string, "</body>");
-    break;
+  compile(compiler, node);
+  push_string(s, "<nav class=\"contents\"><ul>");
+  size_t i = 0;
+  while (i < compiler->heading_count) {
+    Heading* heading = compiler->headings[i];
+    push_string(s, "<li><a href=\"#");
+    push_string(s, heading->id);
+    push_string(s, "\">");
+    push_string(s, heading->text);
+    push_string(s, "</a></li>");
+    free_heading(heading);
+    i += 1;
   }
-  case HEADING: {
-    char heading_tag[4];
-    snprintf(heading_tag, sizeof(heading_tag), "h%d>", *((uint8_t*) node->value));
-    push_string(string, "<");
-    push_string(string, heading_tag);
-    for (i = 0; i < node->children_count; i++) {
-      push_string_free(string, compile_node(node->children[i]));
-    }
-    push_string(string, "</");
-    push_string(string, heading_tag);
-    break;
-  }
-  case LINK:
-    push_string(string, "<a target=\"_blank\" href=\"");
-    push_string_free(string, from_text_data(node->value));
-    push_string(string, "\">");
-    for (i = 0; i < node->children_count; i++) {
-      push_string_free(string, compile_node(node->children[i]));
-    }
-    push_string(string, "</a>");
-    break;
-  case UNORDERED_LIST:
-    push_string(string, "<ul>");
-    for (i = 0; i < node->children_count; i++) {
-      push_string(string, "<li>");
-      push_string_free(string, compile_node(node->children[i]));
-      push_string(string, "</li>");
-    }
-    push_string(string, "</ul>");
-    break;
-  case NEWLINE:
-    push_string(string, "</br>");
-    break;
-  case TEXT:
-    push_string_free(string, from_text_data(node->value));
-    break;
-  }
+  push_string(s, "</nav>");
+  
+  char* res = s->value;
 
-  char* value = string->value;
-  free(string);
-  return value;
+  free_compiler(compiler);
+  return res;
 }
