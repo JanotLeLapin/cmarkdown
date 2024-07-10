@@ -82,6 +82,15 @@ compile_node(Node* node)
     }
     push_string(string, "</a>");
     break;
+  case UNORDERED_LIST:
+    push_string(string, "<ul>");
+    for (i = 0; i < node->children_count; i++) {
+      push_string(string, "<li>");
+      push_string(string, compile_node(node->children[i]));
+      push_string(string, "</li>");
+    }
+    push_string(string, "</ul>");
+    break;
   case NEWLINE:
     push_string(string, "</br>");
     break;

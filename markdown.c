@@ -118,6 +118,47 @@ end_href_loop:
 }
 
 Node*
+parse_unordered_list(Parser* parser)
+{
+  size_t children_count = 0;
+  size_t children_capacity = 4;
+  Node** children = malloc(sizeof(void*) * children_capacity);
+
+  for(;;) {
+    char c = parser->source[parser->idx];
+    if ('-' != c)
+      break;
+    parser->idx += 1;
+
+    if (children_count >= children_capacity) {
+      children_capacity *= 2;
+      children = realloc(children, children_capacity);
+    }
+
+    size_t line_start = parser->idx;
+    for (;;) {
+      parser->idx += 1;
+      c = parser->source[parser->idx];
+
+      if ('\n' == c || '\0' == c) {
+        parser->idx += 1;
+        break;
+      }
+    }
+
+    children[children_count] = create_text_node(parser, line_start, parser->idx - 1);
+    children_count += 1;
+  }
+
+  Node* node = malloc(sizeof(Node));
+  node->type = UNORDERED_LIST;
+  node->children_count = children_count;
+  node->children = children;
+
+  return node;
+}
+
+Node*
 parse_text(Parser* parser)
 {
   size_t start = parser->idx;
@@ -128,6 +169,7 @@ parse_text(Parser* parser)
     switch (c) {
     case '\n': goto end_loop;
     case '[': return parse_link(parser);
+    case '-': return parse_unordered_list(parser);
     }
 
     parser->idx += 1;

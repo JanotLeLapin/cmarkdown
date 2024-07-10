@@ -5,6 +5,7 @@ typedef enum {
 
   HEADING,
   LINK,
+  UNORDERED_LIST,
 
   TEXT,
   NEWLINE
