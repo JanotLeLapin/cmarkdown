@@ -76,6 +76,8 @@ create_text_node(Parser* parser, size_t start, size_t end)
   Node* node = malloc(sizeof(Node));
   node->type = TEXT;
   node->value = data;
+  node->children_count = 0;
+  node->children = NULL;
 
   return node;
 }
@@ -85,6 +87,9 @@ parse_newline(Parser* parser)
 {
   Node* node = malloc(sizeof(Node));
   node->type = NEWLINE;
+  node->value = NULL;
+  node->children_count = 0;
+  node->children = NULL;
   
   char c;
   for (;;) {
@@ -187,6 +192,7 @@ parse_unordered_list(Parser* parser)
 
   Node* node = malloc(sizeof(Node));
   node->type = UNORDERED_LIST;
+  node->value = NULL;
   node->children_count = vec->length;
   node->children = vec->nodes;
 
@@ -219,6 +225,8 @@ Node*
 parse_heading(Parser* parser)
 {
   uint8_t* level = malloc(1);
+  *level = 0;
+
   char c;
 
   for (;;) {
@@ -273,6 +281,7 @@ parse(Parser* parser)
 
   Node* root = malloc(sizeof(Node));
   root->type = ROOT;
+  root->value = NULL;
   root->children_count = vec->length;
   root->children = vec->nodes;
 
@@ -307,7 +316,7 @@ read_file(char* filename)
     offset += line_len;
   }
 
-  free(file);
+  fclose(file);
 
   res[offset] = '\0';
   return res;

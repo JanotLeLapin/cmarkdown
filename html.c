@@ -25,6 +25,32 @@ typedef struct {
   Heading** headings;
 } HtmlCompiler;
 
+char*
+to_kebabcase(const char* input)
+{
+  int len = strlen(input);
+  char *result = malloc(len + 1);
+  int i, j;
+  int prev_is_space = 0;
+
+  for (i = 0, j = 0; input[i]; i++) {
+    if (isalnum(input[i])) {
+      result[j++] = tolower(input[i]);
+      prev_is_space = 0;
+    } else if (!prev_is_space && j > 0) {
+      result[j++] = '-';
+      prev_is_space = 1;
+    }
+  }
+
+  if (j > 0 && result[j - 1] == '-') {
+    j--;
+  }
+
+  result[j] = '\0';
+  return realloc(result, j + 1);
+}
+
 String*
 new_string(size_t capacity)
 {
@@ -42,11 +68,11 @@ push_string(String* string, char* value)
   size_t len = strlen(value);
   size_t new_len = string->length + len;
   if (new_len >= string->capacity) {
-    string->capacity = new_len * 2;
+    string->capacity = new_len * 2 + 1;
     string->value = realloc(string->value, string->capacity);
   }
 
-  strcat(string->value, value);
+  memcpy(string->value + string->length, value, len + 1);
   string->length = new_len;
 }
 
@@ -60,8 +86,8 @@ push_char(String* string, char value)
   }
 
   string->value[string->length] = value;
+  string->value[new_len] = '\0';
   string->length = new_len;
-  string->value[string->length] = '\0';
 }
 
 void
@@ -83,11 +109,8 @@ free_compiler(HtmlCompiler* compiler)
 char*
 from_text_data(TextData* data)
 {
-  char* str = malloc(data->length);
-  int i;
-  for (i = 0; i < data->length; i++) {
-    str[i] = data->text[i];
-  }
+  char* str = malloc(data->length + 1);
+  memcpy(str, data->text, data->length);
   str[data->length] = '\0';
 
   return str;
@@ -126,45 +149,17 @@ compile(HtmlCompiler* compiler, Node* node)
     }
     break;
   case HEADING: {
-    int level = *(uint8_t*) node->value;
+    uint8_t level = *((uint8_t*) node->value);
     String* text = new_string(32);
-    String* id = new_string(32);
     while (i < node->children_count) {
       compile_str(text, node->children[i]);
       i += 1;
     }
 
-    size_t idx = 0;
-    size_t last_char = 0;
-    char c;
-    for(;;) {
-      c = text->value[idx];
-
-      if ('\0' == c) {
-        id->value[last_char + 1] = '\0';
-        break;
-      }
-
-      if (isalnum(c)) {
-        push_char(id, tolower(c));
-        last_char = idx;
-        idx += 1;
-      } else {
-        push_char(id, '-');
-        while (!isalnum(c)) {
-          idx += 1;
-          c = text->value[idx];
-        }
-      }
-    }
-
     Heading* heading = malloc(sizeof(Heading));
-    heading->id = id->value;
+    heading->id = to_kebabcase(text->value);
     heading->text = text->value;
     heading->level = level;
-
-    free(text);
-    free(id);
 
     compiler->headings[compiler->heading_count] = heading;
     compiler->heading_count += 1;
@@ -177,6 +172,9 @@ compile(HtmlCompiler* compiler, Node* node)
     push_string(s, "</h");
     push_char(s, '0' + level);
     push_char(s, '>');
+
+    free(text);
+
     break;
   }
   case LINK: {
