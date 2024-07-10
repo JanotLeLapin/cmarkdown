@@ -8,6 +8,10 @@
   src = ./.;
 
   buildPhase = ''
+    if [ ! -e config.h ]
+    then
+      cp config.def.h config.h
+    fi
     gcc markdown.c html.c -o markdown
   '';
   installPhase = ''

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
+
 typedef struct {
   size_t length;
   size_t capacity;
@@ -56,7 +58,9 @@ compile_node(Node* node)
   switch (node->type) {
   case ROOT: {
     String* contents = new_string(32);
-    push_string(contents, "<nav class=\"contents\"><h3>Table of contents</h3><ul>");
+    push_string(contents, "<nav class=\"contents\"><h3>");
+    push_string(contents, TOC_TITLE);
+    push_string(contents, "</h3><ul>");
     push_string(string, "<!DOCTYPE HTML><body>");
     for (i = 0; i < node->children_count; i++) {
       Node* child = node->children[i];
