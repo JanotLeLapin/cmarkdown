@@ -4,6 +4,7 @@ typedef enum {
   ROOT,
 
   HEADING,
+  LINK,
 
   TEXT,
   NEWLINE
