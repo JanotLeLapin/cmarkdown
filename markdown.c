@@ -24,6 +24,19 @@ free_node(Node* node)
   free(node);
 }
 
+void
+skip_whitespace(Parser* parser)
+{
+  char c;
+  for (;;) {
+    c = parser->source[parser->idx];
+    if (c != ' ' && c != '\t')
+      break;
+
+    parser->idx += 1;
+  }
+}
+
 Node*
 create_text_node(Parser* parser, size_t start, size_t end)
 {
@@ -129,6 +142,7 @@ parse_unordered_list(Parser* parser)
     if ('-' != c)
       break;
     parser->idx += 1;
+    skip_whitespace(parser);
 
     if (children_count >= children_capacity) {
       children_capacity *= 2;
@@ -193,6 +207,7 @@ parse_heading(Parser* parser)
     parser->idx += 1;
     *level += 1;
   }
+  skip_whitespace(parser);
 
   Node* text = parse_text(parser);
   Node* node = malloc(sizeof(Node));
