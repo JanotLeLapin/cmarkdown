@@ -253,48 +253,11 @@ main(int argc, char** argv)
 
   Parser parser = { .source = source, .idx = 0 };
   Node* root = parse(&parser);
+  char* html = compile_node(root);
 
-  size_t i;
-  for (i = 0; i < root->children_count; i++) {
-    Node* node = root->children[i];
-    if (HEADING == node->type) {
-      Node* text_node = node->children[0];
-      TextData* text = text_node->value;
-      printf("heading lvl %d: '", *((uint8_t*) node->value));
+  printf("%s", html);
 
-      int j;
-      for (j = 0; j < text->length; j++) {
-        putchar(*(text->text + j));
-      }
-      printf("'\n");
-    }
-
-    if (LINK == node->type) {
-      Node* text_node = node->children[0];
-      TextData* text = text_node->value;
-      TextData* href = node->value;
-      printf("link '");
-      int j;
-      for (j = 0; j < text->length; j++) {
-        putchar(*(text->text + j));
-      }
-      printf("' goes to: '");
-      for (j = 0; j < href->length; j++) {
-        putchar(*(href->text + j));
-      }
-      printf("'\n");
-    }
-
-    if (TEXT == node->type) {
-      TextData* text = node->value;
-      printf("text: '");
-      int j;
-      for (j = 0; j < text->length; j++) {
-        putchar(*(text->text + j));
-      }
-      printf("'\n");
-    }
-  }
-  
+  free(source);
+  free(html);
   free_node(root);
 }

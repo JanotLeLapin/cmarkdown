@@ -8,7 +8,7 @@
   src = ./.;
 
   buildPhase = ''
-    gcc markdown.c -o markdown
+    gcc markdown.c html.c -o markdown
   '';
   installPhase = ''
     mkdir -p $out/bin

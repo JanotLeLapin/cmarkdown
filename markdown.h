@@ -24,3 +24,6 @@ typedef struct {
 
 void
 free_node(Node* node);
+
+char*
+compile_node(Node* node);
