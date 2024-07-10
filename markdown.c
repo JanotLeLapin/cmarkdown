@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 typedef struct {
   char* source;
@@ -135,10 +136,51 @@ parse(Parser* parser)
   return root;
 }
 
-int
-main()
+char*
+read_file(char* filename)
 {
-  char* source = "# Hello, world!\n\nThis is text\n\n## Something hello\n";
+  size_t capacity = 256;
+  char* res = malloc(capacity);
+  
+  FILE* file;
+  char buffer[256];
+
+  file = fopen(filename, "r");
+  if (NULL == file)
+    return NULL;
+
+  size_t offset = 0;
+  for (;;) {
+    if (NULL == fgets(buffer, sizeof(buffer), file))
+      break;
+
+    size_t line_len = strlen(buffer);
+    if (offset + line_len >= capacity) {
+      capacity *= 2;
+      res = realloc(res, capacity);
+    }
+    memcpy(res + offset, buffer, line_len);
+    offset += line_len;
+  }
+
+  res[offset] = '\0';
+  return res;
+}
+
+int
+main(int argc, char** argv)
+{
+  if (argc <= 1) {
+    printf("Please specify file path\n");
+    return 1;
+  }
+
+  char* source = read_file(argv[1]);
+  if (NULL == source) {
+    printf("Could not open file %s\n", argv[1]);
+    return 1;
+  }
+
   Parser parser = { .source = source, .idx = 0 };
   Node* root = parse(&parser);
 
