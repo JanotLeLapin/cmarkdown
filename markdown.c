@@ -307,6 +307,8 @@ read_file(char* filename)
     offset += line_len;
   }
 
+  free(file);
+
   res[offset] = '\0';
   return res;
 }

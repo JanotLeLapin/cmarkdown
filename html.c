@@ -30,12 +30,19 @@ push_string(String* string, char* value)
   size_t len = strlen(value);
   size_t new_len = string->length + len;
   if (new_len >= string->capacity) {
-    string->capacity *= 2;
+    string->capacity = new_len * 2;
     string->value = realloc(string->value, string->capacity);
   }
 
-  memcpy(string->value + string->length, value, len + 1);
+  strcat(string->value, value);
   string->length = new_len;
+}
+
+void
+push_string_free(String* string, char* value)
+{
+  push_string(string, value);
+  free(value);
 }
 
 char*
@@ -72,11 +79,11 @@ compile_node(Node* node)
         push_string(contents, "\">");
         int j;
         for (j = 0; j < child->children_count; j++) {
-          push_string(contents, compile_node(child->children[j]));
+          push_string_free(contents, compile_node(child->children[j]));
         }
         push_string(contents, "</li>");
       }
-      push_string(string, compile_node(child));
+      push_string_free(string, compile_node(child));
     }
     push_string(contents, "</ul></nav>");
 
@@ -95,7 +102,7 @@ compile_node(Node* node)
     push_string(string, "<");
     push_string(string, heading_tag);
     for (i = 0; i < node->children_count; i++) {
-      push_string(string, compile_node(node->children[i]));
+      push_string_free(string, compile_node(node->children[i]));
     }
     push_string(string, "</");
     push_string(string, heading_tag);
@@ -103,10 +110,10 @@ compile_node(Node* node)
   }
   case LINK:
     push_string(string, "<a target=\"_blank\" href=\"");
-    push_string(string, from_text_data(node->value));
+    push_string_free(string, from_text_data(node->value));
     push_string(string, "\">");
     for (i = 0; i < node->children_count; i++) {
-      push_string(string, compile_node(node->children[i]));
+      push_string_free(string, compile_node(node->children[i]));
     }
     push_string(string, "</a>");
     break;
@@ -114,7 +121,7 @@ compile_node(Node* node)
     push_string(string, "<ul>");
     for (i = 0; i < node->children_count; i++) {
       push_string(string, "<li>");
-      push_string(string, compile_node(node->children[i]));
+      push_string_free(string, compile_node(node->children[i]));
       push_string(string, "</li>");
     }
     push_string(string, "</ul>");
@@ -123,7 +130,7 @@ compile_node(Node* node)
     push_string(string, "</br>");
     break;
   case TEXT:
-    push_string(string, from_text_data(node->value));
+    push_string_free(string, from_text_data(node->value));
     break;
   }
 
