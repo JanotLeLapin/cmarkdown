@@ -1,5 +1,6 @@
 #include "markdown.h"
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,6 +94,25 @@ from_text_data(TextData* data)
 }
 
 void
+compile_str(String* s, Node* node)
+{
+  size_t i = 0;
+  switch (node->type) {
+  case TEXT: {
+    char* text = from_text_data(node->value);
+    push_string(s, text);
+    free(text);
+    break;
+  }
+  case NEWLINE:
+    push_string(s, "<br>");
+    break;
+  default:
+    break;
+  }
+}
+
+void
 compile(HtmlCompiler* compiler, Node* node)
 {
   String* s = compiler->string;
@@ -107,28 +127,53 @@ compile(HtmlCompiler* compiler, Node* node)
     break;
   case HEADING: {
     int level = *(uint8_t*) node->value;
-    size_t j = compiler->heading_count;
+    String* text = new_string(32);
+    String* id = new_string(32);
+    while (i < node->children_count) {
+      compile_str(text, node->children[i]);
+      i += 1;
+    }
+
+    size_t idx = 0;
+    size_t last_char = 0;
+    char c;
+    for(;;) {
+      c = text->value[idx];
+
+      if ('\0' == c) {
+        id->value[last_char + 1] = '\0';
+        break;
+      }
+
+      if (isalnum(c)) {
+        push_char(id, tolower(c));
+        last_char = idx;
+        idx += 1;
+      } else {
+        push_char(id, '-');
+        while (!isalnum(c)) {
+          idx += 1;
+          c = text->value[idx];
+        }
+      }
+    }
+
     Heading* heading = malloc(sizeof(Heading));
-    heading->id = malloc(3);
-    heading->id[0] = 'h';
-    heading->id[1] = '0' + j;
-    heading->id[2] = '\0';
+    heading->id = id->value;
+    heading->text = text->value;
     heading->level = level;
-    heading->text = malloc(3);
-    heading->text[0] = 'H';
-    heading->text[1] = 'i';
-    heading->text[2] = '\0';
-    compiler->headings[j] = heading;
+
+    free(text);
+    free(id);
+
+    compiler->headings[compiler->heading_count] = heading;
     compiler->heading_count += 1;
     push_string(s, "<h");
     push_char(s, '0' + level);
     push_string(s, " id=\"");
     push_string(s, heading->id);
     push_string(s, "\">");
-    while (i < node->children_count) {
-      compile(compiler, node->children[i]);
-      i += 1;
-    }
+    push_string(s, text->value);
     push_string(s, "</h");
     push_char(s, '0' + level);
     push_char(s, '>');
@@ -157,14 +202,9 @@ compile(HtmlCompiler* compiler, Node* node)
     }
     push_string(s, "</ul>");
     break;
-  case TEXT: {
-    char* text = from_text_data(node->value);
-    push_string(s, text);
-    free(text);
+  default:
+    compile_str(compiler->string, node);
     break;
-  }
-  case NEWLINE:
-    push_string(s, "<br>");
   }
 }
 
