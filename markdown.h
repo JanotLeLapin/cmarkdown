@@ -4,6 +4,7 @@
 typedef enum {
   ROOT,
 
+  PARAGRAPH,
   HEADING,
   LINK,
   UNORDERED_LIST,

@@ -1,5 +1,6 @@
 #include "markdown.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 typedef struct {
@@ -15,6 +16,7 @@ typedef struct {
 
 Node* parse_text(Parser* parser);
 Node* parse_line(Parser* parser);
+Node* parse_inline(Parser* parser);
 
 void
 free_nodevec(NodeVec* vec)
@@ -91,8 +93,6 @@ parse_link(Parser* parser)
 
   NodeVec* children = new_nodevec(8);
   for (;;) {
-    push(children, parse_text(parser));
-
     c = parser->source[parser->idx];
     if ('\n' == c || '\0' == c) {
       free_nodevec(children);
@@ -101,6 +101,8 @@ parse_link(Parser* parser)
     if (']' == c) {
       break;
     }
+
+    push(children, parse_inline(parser));
   }
 
   parser->idx += 1;
@@ -215,7 +217,7 @@ parse_aside(Parser* parser)
   for (;;) {
     count = 0;
 
-    push(children, parse_text(parser));
+    push(children, parse_inline(parser));
     if ('\0' == parser->source[parser->idx])
       return NULL;
 
@@ -252,32 +254,43 @@ Node*
 parse_text(Parser* parser)
 {
   size_t start = parser->idx;
-  char c = parser->source[parser->idx];
 
   for (;;) {
-    Node* node;
-    switch (c) {
+    switch (parser->source[parser->idx]) {
     case '\n': goto end_loop;
     case '\0': goto end_loop;
+    case '[': goto end_loop;
     case ']': goto end_loop;
-    case ':': goto end_loop;
-    case '[':
-      node = parse_link(parser);
-      break;
     default:
       parser->idx += 1;
-      c = parser->source[parser->idx];
       continue;
     }
-
-    if (NULL == node)
-      goto end_loop;
-    else
-      return node;
   }
 
 end_loop:
   return new_node(TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL);
+}
+
+Node*
+parse_paragraph(Parser* parser)
+{
+  NodeVec* nodes = new_nodevec(8);
+  for (;;) {
+    Node* node = parse_inline(parser);
+    if (NULL == node) {
+      parser->idx += 1;
+      continue;
+    }
+
+    push(nodes, node);
+
+    if (parser->source[parser->idx] == '\n')
+      break;
+  }
+
+  Node* node = new_node(PARAGRAPH, NULL, nodes->length, nodes->nodes);
+  free(nodes);
+  return node;
 }
 
 Node*
@@ -298,10 +311,30 @@ parse_heading(Parser* parser)
   }
   skip_whitespace(parser);
 
-  Node* text = parse_text(parser);
-  Node** children = malloc(sizeof(void*));
-  children[0] = text;
-  return new_node(HEADING, level, 1, children);
+  NodeVec* children = new_nodevec(2);
+  Node* child;
+  for (;;) {
+    child = parse_inline(parser);
+    if (NULL == child)
+      break;
+    push(children, child);
+  }
+
+  Node* node = new_node(HEADING, level, children->length, children->nodes);
+  free(children);
+  return node;
+}
+
+Node*
+parse_inline(Parser* parser)
+{
+  switch (parser->source[parser->idx]) {
+  case '\0': return NULL;
+  case '\n': return NULL;
+  case '[': return parse_link(parser);
+  default:
+    return parse_text(parser);
+  }
 }
 
 Node*
@@ -327,7 +360,7 @@ parse_line(Parser* parser)
     node = parse_aside(parser);
     break;
   default:
-    node = parse_text(parser);
+    node = parse_paragraph(parser);
     break;
   }
 

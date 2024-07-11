@@ -149,6 +149,14 @@ compile(HtmlCompiler* compiler, Node* node)
       i++;
     }
     break;
+  case PARAGRAPH:
+    push_string(s, "<p>");
+    while (i < node->children_count) {
+      compile(compiler, node->children[i]);
+      i += 1;
+    }
+    push_string(s, "</p>");
+    break;
   case HEADING: {
     uint8_t level = *((uint8_t*) node->value);
     String* text = new_string(32);
