@@ -2,46 +2,46 @@
 #include <stdint.h>
 
 typedef enum {
-  ROOT,
+  NODE_ROOT,
 
-  PARAGRAPH,
-  HEADING,
-  LINK,
-  UNORDERED_LIST,
-  ASIDE,
+  NODE_PARAGRAPH,
+  NODE_HEADING,
+  NODE_LINK,
+  NODE_UNORDERED_LIST,
+  NODE_ASIDE,
 
-  TEXT,
-  NEWLINE
+  NODE_TEXT,
+  NODE_NEWLINE
 } NodeType;
 
 typedef struct Node {
   NodeType type;
-  void* value;
+  void *value;
   size_t children_count;
-  struct Node** children;
+  struct Node **children;
 } Node;
 
 typedef struct {
-  char* text;
+  char *text;
   size_t length;
 } TextData;
 
 typedef struct {
-  TextData* type;
-  TextData* title;
+  TextData *type;
+  TextData *title;
 } AsideData;
 
-TextData*
-new_text_data(char* source, size_t start, size_t end);
+TextData *
+new_text_data(char *source, size_t start, size_t end);
 
-Node*
-new_node(NodeType type, void* value, size_t children_count, Node** children);
+Node *
+new_node(NodeType type, void *value, size_t children_count, Node **children);
 
 void
-free_node(Node* node);
+free_node(Node *node);
 
-Node*
-parse_source(char* source);
+Node *
+parse_source(char *source);
 
-char*
-compile_node(Node* node);
+char *
+compile_node(Node *node);
