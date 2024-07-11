@@ -12,7 +12,7 @@
     then
       cp config.def.h config.h
     fi
-    gcc markdown.c html.c -o markdown
+    gcc markdown.c parse.c html.c -o markdown -std=c99 -Wall
   '';
   installPhase = ''
     mkdir -p $out/bin
