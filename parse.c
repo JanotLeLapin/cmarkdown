@@ -238,12 +238,6 @@ parse_text(Parser* parser)
     case '[':
       node = parse_link(parser);
       break;
-    case '-':
-      node = parse_unordered_list(parser);
-      break;
-    case ':':
-      node = parse_aside(parser);
-      break;
     default:
       parser->idx += 1;
       continue;
@@ -298,6 +292,12 @@ parse_line(Parser* parser)
     break;
   case '#':
     node = parse_heading(parser);
+    break;
+  case '-':
+    node = parse_unordered_list(parser);
+    break;
+  case ':':
+    node = parse_aside(parser);
     break;
   default:
     node = parse_text(parser);
