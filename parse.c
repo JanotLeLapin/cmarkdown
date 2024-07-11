@@ -268,6 +268,9 @@ parse_text(Parser* parser)
   }
 
 end_loop:
+  if (start == parser->idx)
+    return NULL;
+
   return new_node(TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL);
 }
 
@@ -276,16 +279,17 @@ parse_paragraph(Parser* parser)
 {
   NodeVec* nodes = new_nodevec(8);
   for (;;) {
+    if (parser->source[parser->idx] == '\n')
+      break;
+
     Node* node = parse_inline(parser);
     if (NULL == node) {
+      push(nodes, new_node(TEXT, new_text_data(parser->source, parser->idx, parser->idx + 1), 0, NULL));
       parser->idx += 1;
       continue;
     }
 
     push(nodes, node);
-
-    if (parser->source[parser->idx] == '\n')
-      break;
   }
 
   Node* node = new_node(PARAGRAPH, NULL, nodes->length, nodes->nodes);
