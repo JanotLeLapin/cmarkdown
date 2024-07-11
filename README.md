@@ -7,3 +7,4 @@ This implementation isn't following a specification in particular, rather it's a
 - Headings
 - Links
 - Unordered lists
+- Asides

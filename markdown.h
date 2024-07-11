@@ -6,6 +6,7 @@ typedef enum {
   HEADING,
   LINK,
   UNORDERED_LIST,
+  ASIDE,
 
   TEXT,
   NEWLINE
@@ -22,6 +23,11 @@ typedef struct {
   char* text;
   size_t length;
 } TextData;
+
+typedef struct {
+  TextData* type;
+  TextData* title;
+} AsideData;
 
 void
 free_node(Node* node);

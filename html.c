@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -200,6 +201,27 @@ compile(HtmlCompiler* compiler, Node* node)
     }
     push_string(s, "</ul>");
     break;
+  case ASIDE: {
+    AsideData* data = node->value;
+    char* type = from_text_data(data->type);
+    push_string(s, "<aside class=\"aside-");
+    push_string(s, type);
+    free(type);
+    push_string(s, "\">");
+    if (NULL != data->title) {
+      char* title = from_text_data(data->title);
+      push_string(s, "<h3>");
+      push_string(s, title);
+      free(title);
+      push_string(s, "</h3>");
+    }
+    while (i < node->children_count) {
+      compile(compiler, node->children[i]);
+      i += 1;
+    }
+    push_string(s, "</aside>");
+    break;
+  }
   default:
     compile_str(compiler->string, node);
     break;

@@ -42,7 +42,30 @@ push(NodeVec* vec, Node* node)
 void
 free_node(Node* node)
 {
-  free(node->value);
+  switch (node->type) {
+  case ROOT:
+    free(node->value);
+    break;
+  case HEADING:
+    free(node->value);
+    break;
+  case LINK:
+    free(node->value);
+    break;
+  case ASIDE: {
+    AsideData* data = node->value;
+    if (NULL != data->title)
+      free(data->title);
+    free(data->type);
+    free(node->value);
+    break;
+  }
+  case TEXT:
+    free(node->value);
+    break;
+  default:
+    break;
+  }
 
   int i;
   for (i = 0; i < node->children_count; i++) {
@@ -201,6 +224,89 @@ parse_unordered_list(Parser* parser)
 }
 
 Node*
+parse_aside(Parser* parser)
+{
+  size_t start = parser->idx;
+  char c;
+
+  for (;;) {
+    if (':' != parser->source[parser->idx])
+      break;
+    parser->idx += 1;
+  }
+  if (3 != parser->idx - start) return create_text_node(parser, start, parser->idx);
+
+  size_t type_start = parser->idx;
+  for(;;) {
+    c = parser->source[parser->idx];
+    if ('\n' == c || '[' == c)
+      break;
+    parser->idx += 1;
+  }
+  size_t type_end = parser->idx;
+
+  TextData* title = NULL;
+  if ('[' == c) {
+    parser->idx += 1;
+    size_t title_start = parser->idx;
+    for (;;) {
+      c = parser->source[parser->idx];
+      if ('\n' == c)
+        return create_text_node(parser, start, parser->idx);
+      if (']' == c)
+        break;
+      parser->idx += 1;
+    }
+    size_t title_end = parser->idx;
+
+    title = malloc(sizeof(TextData));
+    title->text = parser->source + title_start;
+    title->length = title_end - title_start;
+
+    parser->idx += 1;
+  }
+
+  parser->idx += 1;
+
+  size_t text_start = parser->idx;
+  uint8_t count;
+  for (;;) {
+    count = 0;
+    for (;;) {
+      if (':' == parser->source[parser->idx])
+        count += 1;
+      else
+        break;
+      parser->idx += 1;
+    }
+    if (count == 3)
+      break;
+    parser->idx += 1;
+  }
+  size_t text_end = parser->idx - 3;
+
+  Node* text = create_text_node(parser, text_start, text_end);
+  Node** children = malloc(sizeof(void*));
+  children[0] = text;
+
+  TextData* type = malloc(sizeof(TextData));
+  type->text = parser->source + type_start;
+  type->length = type_end - type_start;
+
+  AsideData* data = malloc(sizeof(AsideData));
+  data->type = type;
+  data->title = title;
+
+  Node* node = malloc(sizeof(Node));
+  node->children_count = 1;
+  node->children = children;
+  node->type = ASIDE;
+  node->value = data;
+
+  return node;
+}
+
+Node*
 parse_text(Parser* parser)
 {
   size_t start = parser->idx;
@@ -212,6 +318,7 @@ parse_text(Parser* parser)
     case '\n': goto end_loop;
     case '[': return parse_link(parser);
     case '-': return parse_unordered_list(parser);
+    case ':': return parse_aside(parser);
     }
 
     parser->idx += 1;
