@@ -16,6 +16,9 @@
   in {
     githubActions = nix-github-actions.lib.mkGithubMatrix { checks = self.packages; };
     devShells = eachSystem ({ pkgs, ... }: { default = pkgs.callPackage ./shell.nix {}; });
-    packages = eachSystem ({ pkgs, ... }: { default = pkgs.callPackage ./default.nix {}; });
+    packages = eachSystem ({ system, pkgs, ... }: {
+      default = pkgs.callPackage ./default.nix {};
+      www = pkgs.callPackage ./www.nix { markdown = self.packages."${system}".default; };
+    });
   };
 }
