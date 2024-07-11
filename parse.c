@@ -66,7 +66,7 @@ skip_whitespace(Parser* parser)
 Node*
 parse_newline(Parser* parser)
 {
-  Node* node = new_newline_node();
+  Node* node = new_node(NEWLINE, NULL, 0, NULL);
   char c;
   for (;;) {
     c = parser->source[parser->idx];
@@ -131,7 +131,7 @@ end_href_loop:
   href = new_text_data(parser->source, href_start, parser->idx);
   parser->idx += 1;
 
-  Node* node = new_link_node(href, children->length, children->nodes);
+  Node* node = new_node(LINK, href, children->length, children->nodes);
   free(children);
   return node;
 }
@@ -159,10 +159,10 @@ parse_unordered_list(Parser* parser)
       }
     }
 
-    push(vec, new_text_node(new_text_data(parser->source, line_start, parser->idx - 1)));
+    push(vec, new_node(TEXT, new_text_data(parser->source, line_start, parser->idx - 1), 0, NULL));
   }
 
-  Node* node = new_unordered_list_node(vec->length, vec->nodes);
+  Node* node = new_node(UNORDERED_LIST, NULL, vec->length, vec->nodes);
   free(vec);
   return node;
 }
@@ -224,7 +224,7 @@ parse_aside(Parser* parser)
       parser->idx += 1;
     }
     if (count > 1)
-      push(children, new_newline_node());
+      push(children, new_node(NEWLINE, NULL, 0, NULL));
 
     count = 0;
     for (;;) {
@@ -243,7 +243,7 @@ parse_aside(Parser* parser)
   AsideData* data = malloc(sizeof(AsideData));
   data->type = type;
   data->title = title;
-  Node* node = new_aside_node(type, title, children->length, children->nodes);
+  Node* node = new_node(ASIDE, data, children->length, children->nodes);
   free(children);
   return node;
 }
@@ -277,7 +277,7 @@ parse_text(Parser* parser)
   }
 
 end_loop:
-  return new_text_node(new_text_data(parser->source, start, parser->idx));
+  return new_node(TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL);
 }
 
 Node*
@@ -301,7 +301,7 @@ parse_heading(Parser* parser)
   Node* text = parse_text(parser);
   Node** children = malloc(sizeof(void*));
   children[0] = text;
-  return new_heading_node(level, 1, children);
+  return new_node(HEADING, level, 1, children);
 }
 
 Node*
@@ -332,7 +332,7 @@ parse_line(Parser* parser)
   }
 
   if (NULL == node)
-    return new_text_node(new_text_data(parser->source, start, parser->idx));
+    return new_node(TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL);
   else
     return node;
 }
@@ -351,7 +351,7 @@ parse(Parser* parser)
     push(vec, node);
   }
 
-  Node* root = new_root_node(vec->length, vec->nodes);
+  Node* root = new_node(ROOT, NULL, vec->length, vec->nodes);
   free(vec);
   return root;
 }

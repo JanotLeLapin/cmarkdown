@@ -2,27 +2,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
-#define new_node(t, v, cc, c) malloc(sizeof(Node)); \
-  node->type = t; \
-  node->value = v; \
-  node->children_count = cc; \
-  node->children = c;
-#define new_node_nc(t, v) new_node(t, v, 0, NULL)
-
 Node*
-new_root_node(size_t children_count, Node** children)
+new_node(NodeType type, void* value, size_t children_count, Node** children)
 {
-  Node* node = new_node(ROOT, NULL, children_count, children);
-  return node;
-}
-
-Node*
-new_text_node(TextData* text)
-{
-  Node* node = new_node_nc(TEXT, text);
+  Node* node = malloc(sizeof(Node));
+  node->type = type;
+  node->value = value;
+  node->children_count = children_count;
+  node->children = children;
   return node;
 }
 
@@ -33,45 +22,6 @@ new_text_data(char* text, size_t start, size_t end)
   data->text = text + start;
   data->length = end - start;
   return data;
-}
-
-Node*
-new_newline_node()
-{
-  Node* node = new_node_nc(NEWLINE, NULL);
-  return node;
-}
-
-Node*
-new_heading_node(uint8_t* level, size_t children_count, Node** children)
-{
-  Node* node = new_node(HEADING, level, children_count, children);
-  return node;
-}
-
-Node*
-new_link_node(TextData* href, size_t children_count, Node** children)
-{
-  Node* node = new_node(LINK, href, children_count, children);
-  return node;
-}
-
-Node*
-new_unordered_list_node(size_t children_count, Node** children)
-{
-  Node* node = new_node(UNORDERED_LIST, NULL, children_count, children);
-  return node;
-}
-
-Node*
-new_aside_node(TextData* type, TextData* title, size_t children_count, Node** children)
-{
-  AsideData* data = malloc(sizeof(AsideData));
-  data->type = type;
-  data->title = title;
-
-  Node* node = new_node(ASIDE, data, children_count, children);
-  return node;
 }
 
 void
