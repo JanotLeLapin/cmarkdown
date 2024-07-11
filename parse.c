@@ -13,6 +13,20 @@ typedef struct {
   Node** nodes;
 } NodeVec;
 
+Node* parse_text(Parser* parser);
+Node* parse_line(Parser* parser);
+
+void
+free_nodevec(NodeVec* vec)
+{
+  size_t i;
+  for (i = 0; i < vec->length; i++) {
+    free_node(vec->nodes[i]);
+  }
+  free(vec->nodes);
+  free(vec);
+}
+
 NodeVec*
 new_nodevec(size_t capacity)
 {
@@ -69,30 +83,31 @@ Node*
 parse_link(Parser* parser)
 {
   size_t start = parser->idx;
+  char c;
+
   if ('[' != parser->source[parser->idx])
     return NULL;
-
-  char c;
   parser->idx += 1;
-  Node* text;
-  size_t text_start = parser->idx;
-  size_t text_end;
-  for (;;) {
-    c = parser->source[parser->idx];
 
-    switch (c) {
-    case ']': goto end_text_loop;
-    case '\n' | '\0': return NULL;
+  NodeVec* children = new_nodevec(8);
+  for (;;) {
+    push(children, parse_text(parser));
+
+    c = parser->source[parser->idx];
+    if ('\n' == c || '\0' == c) {
+      free_nodevec(children);
+      return NULL;
     }
-    parser->idx += 1;
+    if (']' == c) {
+      break;
+    }
   }
 
-end_text_loop:
-  text_end = parser->idx;
-
   parser->idx += 1;
-  if ('(' != parser->source[parser->idx])
+  if ('(' != parser->source[parser->idx]) {
+    free_nodevec(children);
     return NULL;
+  }
 
   parser->idx += 1;
   TextData* href;
@@ -102,19 +117,22 @@ end_text_loop:
 
     switch (c) {
     case ')': goto end_href_loop;
-    case '\n' | '\0': NULL;
+    case '\n':
+      free_nodevec(children);
+      return NULL;
+    case '\0':
+      free_nodevec(children);
+      return NULL;
     }
     parser->idx += 1;
   }
 
 end_href_loop:
-  text = new_text_node(new_text_data(parser->source, text_start, text_end));
   href = new_text_data(parser->source, href_start, parser->idx);
-
-  Node** children = malloc(sizeof(void*));
-  children[0] = text;
-  Node* node = new_link_node(href, 1, children);
   parser->idx += 1;
+
+  Node* node = new_link_node(href, children->length, children->nodes);
+  free(children);
   return node;
 }
 
@@ -192,9 +210,22 @@ parse_aside(Parser* parser)
 
   parser->idx += 1;
 
-  size_t text_start = parser->idx;
+  NodeVec* children = new_nodevec(8);
   uint8_t count;
   for (;;) {
+    count = 0;
+
+    push(children, parse_text(parser));
+    if ('\0' == parser->source[parser->idx])
+      return NULL;
+
+    while ('\n' == parser->source[parser->idx]) {
+      count += 1;
+      parser->idx += 1;
+    }
+    if (count > 1)
+      push(children, new_newline_node());
+
     count = 0;
     for (;;) {
       if (':' == parser->source[parser->idx])
@@ -205,21 +236,15 @@ parse_aside(Parser* parser)
     }
     if (count == 3)
       break;
-    parser->idx += 1;
   }
   size_t text_end = parser->idx - 3;
 
-  Node* text = new_text_node(new_text_data(parser->source, text_start, text_end));
-  Node** children = malloc(sizeof(void*));
-  children[0] = text;
-
   TextData* type = new_text_data(parser->source, type_start, type_end);
-
   AsideData* data = malloc(sizeof(AsideData));
   data->type = type;
   data->title = title;
-
-  Node* node = new_aside_node(type, title, 1, children);
+  Node* node = new_aside_node(type, title, children->length, children->nodes);
+  free(children);
   return node;
 }
 
@@ -227,19 +252,21 @@ Node*
 parse_text(Parser* parser)
 {
   size_t start = parser->idx;
-  char c;
+  char c = parser->source[parser->idx];
 
   for (;;) {
-    c = parser->source[parser->idx];
-
     Node* node;
     switch (c) {
     case '\n': goto end_loop;
+    case '\0': goto end_loop;
+    case ']': goto end_loop;
+    case ':': goto end_loop;
     case '[':
       node = parse_link(parser);
       break;
     default:
       parser->idx += 1;
+      c = parser->source[parser->idx];
       continue;
     }
 
