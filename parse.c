@@ -289,18 +289,22 @@ parse_text(Parser *parser)
 Node *
 parse_paragraph(Parser *parser)
 {
+  size_t start;
+  char c;
   NodeVec *nodes;
   Node *node;
 
   nodes = new_nodevec(8);
   for (;;) {
-    if (parser->source[parser->idx] == '\n')
+    c = parser->source[parser->idx];
+    if ('\n' == c || '\0' == c)
       break;
 
+    start = parser->idx;
     node = parse_inline(parser);
     if (NULL == node) {
-      push(nodes, new_node(NODE_TEXT, new_text_data(parser->source, parser->idx, parser->idx + 1), 0, NULL));
       parser->idx += 1;
+      push(nodes, new_node(NODE_TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL));
       continue;
     }
 
@@ -386,14 +390,15 @@ parse_line(Parser *parser)
     node = parse_aside(parser);
     break;
   default:
-    node = parse_paragraph(parser);
     break;
   }
 
-  if (NULL == node)
-    return new_node(NODE_TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL);
-  else
+  if (NULL == node) {
+    parser->idx = start;
+    return parse_paragraph(parser);
+  } else {
     return node;
+  }
 }
 
 Node *
