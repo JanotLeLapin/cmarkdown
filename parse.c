@@ -1,4 +1,5 @@
 #include "markdown.h"
+#include "util.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -8,12 +9,6 @@ typedef struct {
   const char* source;
   size_t idx;
 } Parser;
-
-typedef struct {
-  size_t capacity;
-  size_t length;
-  Node **nodes;
-} NodeVec;
 
 Node *
 parse_text(Parser *parser);
@@ -28,40 +23,15 @@ Node *
 parse_paragraph(Parser *parser);
 
 void
-free_nodevec(NodeVec *vec)
+free_nodevec(Vec *vec)
 {
   size_t i;
 
   for (i = 0; i < vec->length; i++) {
-    free_node(vec->nodes[i]);
+    free_node(vec->elems[i]);
   }
-  free(vec->nodes);
+  free(vec->elems);
   free(vec);
-}
-
-NodeVec *
-new_nodevec(size_t capacity)
-{
-  NodeVec *nodes = malloc(sizeof(NodeVec));
-
-  nodes->capacity = capacity;
-  nodes->length = 0;
-  nodes->nodes = malloc(sizeof(void*) * nodes->capacity);
-  return nodes;
-}
-
-void
-push(NodeVec *vec, Node *node)
-{
-  size_t new_length = vec->length + 1;
-
-  if (new_length >= vec->capacity) {
-    vec->capacity *= 2;
-    vec->nodes = realloc(vec->nodes, sizeof(void *) * vec->capacity);
-  }
-
-  vec->nodes[vec->length] = node;
-  vec->length += 1;
 }
 
 void
@@ -100,7 +70,7 @@ parse_link(Parser *parser)
 {
   size_t start, href_start;
   char c;
-  NodeVec *children;
+  Vec *children;
   TextData *href;
   Node *node;
 
@@ -109,7 +79,7 @@ parse_link(Parser *parser)
     return NULL;
   parser->idx += 1;
 
-  children = new_nodevec(8);
+  children = new_vec(8);
   for (;;) {
     c = parser->source[parser->idx];
     if ('\n' == c || '\0' == c) {
@@ -120,7 +90,7 @@ parse_link(Parser *parser)
       break;
     }
 
-    push(children, parse_inline(parser));
+    push_vec(children, parse_inline(parser));
   }
 
   parser->idx += 1;
@@ -148,7 +118,7 @@ parse_link(Parser *parser)
   href = new_text_data(parser->source, href_start, parser->idx);
   parser->idx += 1;
 
-  node = new_node(NODE_LINK, href, children->length, children->nodes);
+  node = new_node(NODE_LINK, href, children->length, (Node **) children->elems);
   free(children);
   return node;
 }
@@ -156,12 +126,12 @@ parse_link(Parser *parser)
 Node *
 parse_unordered_list(Parser *parser)
 {
-  NodeVec *children;
+  Vec *children;
   Node *node;
   char c;
   size_t line_start;
 
-  children = new_nodevec(4);
+  children = new_vec(4);
   for(;;) {
     c = parser->source[parser->idx];
     if ('-' != c)
@@ -169,10 +139,10 @@ parse_unordered_list(Parser *parser)
     parser->idx += 1;
     skip_whitespace(parser);
 
-    push(children, parse_paragraph(parser));
+    push_vec(children, parse_paragraph(parser));
   }
 
-  node = new_node(NODE_UNORDERED_LIST, NULL, children->length, children->nodes);
+  node = new_node(NODE_UNORDERED_LIST, NULL, children->length, (Node **) children->elems);
   free(children);
   return node;
 }
@@ -184,7 +154,7 @@ parse_aside(Parser* parser)
   size_t start, type_start, type_end, title_start, title_end, text_end;
   uint8_t linebreaks, colons;
   TextData *title;
-  NodeVec *children;
+  Vec *children;
   TextData *type;
   AsideData *data;
   Node *node;
@@ -224,11 +194,11 @@ parse_aside(Parser* parser)
   }
 
   parser->idx += 1;
-  children = new_nodevec(8);
+  children = new_vec(8);
   for (;;) {
     linebreaks = 0;
 
-    push(children, parse_paragraph(parser));
+    push_vec(children, parse_paragraph(parser));
     if ('\0' == parser->source[parser->idx])
       return NULL;
 
@@ -237,7 +207,7 @@ parse_aside(Parser* parser)
       parser->idx += 1;
     }
     if (linebreaks > 1)
-      push(children, new_node(NODE_NEWLINE, NULL, 0, NULL));
+      push_vec(children, new_node(NODE_NEWLINE, NULL, 0, NULL));
 
     colons = 0;
     while (':' == parser->source[parser->idx]) {
@@ -254,7 +224,7 @@ parse_aside(Parser* parser)
   data = malloc(sizeof(AsideData));
   data->type = type;
   data->title = title;
-  node = new_node(NODE_ASIDE, data, children->length, children->nodes);
+  node = new_node(NODE_ASIDE, data, children->length, (Node **) children->elems);
   free(children);
   return node;
 }
@@ -264,7 +234,7 @@ parse_code(Parser *parser)
 {
   char c;
   size_t start, lang_start, lang_end, node_start;
-  NodeVec* children;
+  Vec* children;
   TextData* lang;
   Node* node;
 
@@ -281,7 +251,7 @@ parse_code(Parser *parser)
   lang_end = parser->idx;
 
   parser->idx += 1;
-  children = new_nodevec(16);
+  children = new_vec(16);
 
   for (;;) {
     c = parser->source[parser->idx];
@@ -303,7 +273,7 @@ parse_code(Parser *parser)
         break;
 
       parser->idx = start;
-      push(children, new_node(NODE_NEWLINE, NULL, 0, NULL));
+      push_vec(children, new_node(NODE_NEWLINE, NULL, 0, NULL));
       continue;
     }
 
@@ -330,13 +300,13 @@ parse_code(Parser *parser)
       while (isalnum(parser->source[parser->idx]))
         parser->idx += 1;
     }
-    push(children, new_node(NODE_TEXT, new_text_data(parser->source, node_start, parser->idx), 0, NULL));
+    push_vec(children, new_node(NODE_TEXT, new_text_data(parser->source, node_start, parser->idx), 0, NULL));
   }
 
   lang = NULL;
   if (lang_end > lang_start)
     lang = new_text_data(parser->source, lang_start, lang_end);
-  node = new_node(NODE_CODE, lang, children->length, children->nodes);
+  node = new_node(NODE_CODE, lang, children->length, (Node **) children->elems);
   free(children);
   return node;
 }
@@ -373,10 +343,10 @@ parse_paragraph(Parser *parser)
 {
   size_t start;
   char c;
-  NodeVec *nodes;
+  Vec *nodes;
   Node *node;
 
-  nodes = new_nodevec(8);
+  nodes = new_vec(8);
   for (;;) {
     c = parser->source[parser->idx];
     if ('\n' == c)
@@ -389,14 +359,14 @@ parse_paragraph(Parser *parser)
     node = parse_inline(parser);
     if (NULL == node) {
       parser->idx += 1;
-      push(nodes, new_node(NODE_TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL));
+      push_vec(nodes, new_node(NODE_TEXT, new_text_data(parser->source, start, parser->idx), 0, NULL));
       continue;
     }
 
-    push(nodes, node);
+    push_vec(nodes, node);
   }
 
-  node = new_node(NODE_PARAGRAPH, NULL, nodes->length, nodes->nodes);
+  node = new_node(NODE_PARAGRAPH, NULL, nodes->length, (Node **) nodes->elems);
   free(nodes);
   return node;
 }
@@ -406,7 +376,7 @@ parse_heading(Parser *parser)
 {
   uint8_t *level;
   char c;
-  NodeVec *children;
+  Vec *children;
   Node *node;
 
   level = malloc(1);
@@ -421,15 +391,15 @@ parse_heading(Parser *parser)
   }
   skip_whitespace(parser);
 
-  children = new_nodevec(2);
+  children = new_vec(2);
   for (;;) {
     node = parse_inline(parser);
     if (NULL == node)
       break;
-    push(children, node);
+    push_vec(children, node);
   }
 
-  node = new_node(NODE_HEADING, level, children->length, children->nodes);
+  node = new_node(NODE_HEADING, level, children->length, (Node **) children->elems);
   free(children);
   return node;
 }
@@ -492,19 +462,19 @@ parse_line(Parser *parser)
 Node *
 parse(Parser *parser)
 {
-  NodeVec *nodes;
+  Vec *nodes;
   Node *node;
 
-  nodes = new_nodevec(8);
+  nodes = new_vec(8);
   for (;;) {
     node = parse_line(parser);
     if (NULL == node) {
       break;
     }
-    push(nodes, node);
+    push_vec(nodes, node);
   }
 
-  node = new_node(NODE_ROOT, NULL, nodes->length, nodes->nodes);
+  node = new_node(NODE_ROOT, NULL, nodes->length, (Node **) nodes->elems);
   free(nodes);
   return node;
 }

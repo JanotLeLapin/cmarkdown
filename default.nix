@@ -10,7 +10,7 @@
 
   buildPhase = ''
     cp ${markdown-config} config.h
-    gcc markdown.c parse.c html.c -o markdown -std=c99 -Wall
+    gcc markdown.c parse.c html.c util.c -o markdown -std=c99 -Wall
   '';
   installPhase = ''
     mkdir -p $out/bin
