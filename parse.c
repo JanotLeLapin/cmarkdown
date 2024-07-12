@@ -1,5 +1,6 @@
 #include "markdown.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -259,6 +260,67 @@ parse_aside(Parser* parser)
 }
 
 Node *
+parse_code(Parser *parser)
+{
+  char c;
+  size_t start, lang_start, lang_end, node_start;
+  NodeVec* children;
+  TextData* lang;
+
+  start = parser->idx;
+  while ('`' == parser->source[parser->idx])
+    parser->idx += 1;
+
+  if (parser->idx - start != 3)
+    return NULL;
+
+  lang_start = parser->idx;
+  while ('\n' != parser->source[parser->idx])
+    parser->idx += 1;
+  lang_end = parser->idx;
+
+  parser->idx += 1;
+  children = new_nodevec(16);
+
+  for (;;) {
+    c = parser->source[parser->idx];
+
+    node_start = parser->idx;
+
+    if ('\0' == c) {
+      free_nodevec(children);
+      return NULL;
+    }
+
+    if ('\n' == c) {
+      parser->idx += 1;
+      start = parser->idx;
+      while ('`' == parser->source[parser->idx])
+        parser->idx += 1;
+
+      if (parser->idx - start == 3)
+        break;
+
+      parser->idx = start;
+      push(children, new_node(NODE_NEWLINE, NULL, 0, NULL));
+      continue;
+    }
+
+    parser->idx += 1;
+    if (isalnum(c)) {
+      while (isalnum(parser->source[parser->idx]))
+        parser->idx += 1;
+    }
+    push(children, new_node(NODE_TEXT, new_text_data(parser->source, node_start, parser->idx), 0, NULL));
+  }
+
+  lang = NULL;
+  if (lang_end > lang_start)
+    lang = new_text_data(parser->source, lang_start, lang_end);
+  return new_node(NODE_CODE, lang, children->length, children->nodes);
+}
+
+Node *
 parse_text(Parser *parser)
 {
   size_t start;
@@ -390,6 +452,9 @@ parse_line(Parser *parser)
     break;
   case ':':
     node = parse_aside(parser);
+    break;
+  case '`':
+    node = parse_code(parser);
     break;
   default:
     break;

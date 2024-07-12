@@ -9,6 +9,7 @@ typedef enum {
   NODE_LINK,
   NODE_UNORDERED_LIST,
   NODE_ASIDE,
+  NODE_CODE,
 
   NODE_TEXT,
   NODE_NEWLINE

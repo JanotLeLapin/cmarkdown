@@ -156,6 +156,7 @@ compile(HtmlCompiler *compiler, Node *node)
   Heading *heading;
   char *url;
   AsideData *aside;
+  TextData *lang;
 
   s = compiler->string;
   switch (node->type) {
@@ -240,6 +241,15 @@ compile(HtmlCompiler *compiler, Node *node)
     push_string(s, "</aside>");
     break;
   }
+  case NODE_CODE:
+    lang = node->value;
+    push_string(s, "<pre class=\"code\">");
+    for (i = 0; i < node->children_count; i++) {
+      push_string(s, "<span>");
+      compile(compiler, node->children[i]);
+      push_string(s, "</span>");
+    }
+    push_string(s, "</pre>");
   default:
     compile_str(compiler->string, node);
     break;
