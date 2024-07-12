@@ -256,23 +256,18 @@ compile(HtmlCompiler *compiler, Node *node)
   }
 }
 
-char * 
-compile_node(Node *node)
+#ifdef TOC
+void
+compile_toc(HtmlCompiler *compiler)
 {
   String *s;
-  HtmlCompiler *compiler;
   Heading *heading;
-  char *res;
   size_t i;
 
-  s = new_string(32);
-  compiler = malloc(sizeof(HtmlCompiler));
-  compiler->string = s;
-  compiler->heading_count = 0;
-  compiler->headings = malloc(sizeof(Heading) * 32);
-
-  compile(compiler, node);
-  push_string(s, "<nav class=\"contents\"><ul>");
+  s = compiler->string;
+  push_string(s, "<nav class=\"contents\"><h3>");
+  push_string(s, TOC_TITLE);
+  push_string(s, "</h3><ul>");
   for (i = 0; i < compiler->heading_count; i++) {
     heading = compiler->headings[i];
     push_string(s, "<li><a href=\"#");
@@ -283,6 +278,28 @@ compile_node(Node *node)
     free_heading(heading);
   }
   push_string(s, "</nav>");
+}
+#else
+void
+compile_toc(HtmlCompiler *compiler) {}
+#endif
+
+char * 
+compile_node(Node *node)
+{
+  String *s;
+  HtmlCompiler *compiler;
+  Heading *heading;
+  char *res;
+
+  s = new_string(32);
+  compiler = malloc(sizeof(HtmlCompiler));
+  compiler->string = s;
+  compiler->heading_count = 0;
+  compiler->headings = malloc(sizeof(Heading) * 32);
+
+  compile(compiler, node);
+  compile_toc(compiler);
   
   res = s->value;
 
