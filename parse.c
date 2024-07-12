@@ -307,6 +307,24 @@ parse_code(Parser *parser)
       continue;
     }
 
+    if ('"' == c || '\'' == c || '`' == c) {
+      for (;;) {
+        parser->idx += 1;
+        switch (parser->source[parser->idx]) {
+        case '\0':
+        case '\n':
+          parser->idx = node_start + 1;
+          break;
+        default:
+          if (parser->source[parser->idx] == c)
+            break;
+          continue;
+        }
+
+        break;
+      }
+    }
+
     parser->idx += 1;
     if (isalnum(c)) {
       while (isalnum(parser->source[parser->idx]))
