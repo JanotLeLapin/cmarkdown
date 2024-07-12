@@ -30,27 +30,39 @@ new_text_data(const char *text, size_t start, size_t end)
 void
 free_node(Node *node)
 {
+  size_t i;
+  AsideData *aside;
+  CodeData *code;
+
   switch (node->type) {
   case NODE_ROOT:
   case NODE_HEADING:
   case NODE_LINK:
-  case NODE_CODE:
   case NODE_TEXT:
     free(node->value);
     break;
   case NODE_ASIDE: {
-    AsideData* data = node->value;
-    if (NULL != data->title)
-      free(data->title);
-    free(data->type);
-    free(node->value);
+    aside = node->value;
+    if (NULL != aside->title)
+      free(aside->title);
+    free(aside->type);
+    free(aside);
     break;
   }
+  case NODE_CODE:
+    code = node->value;
+    for (i = 0; i < code->length; i++) {
+      free(code->elements[i]->value);
+      free(code->elements[i]);
+    }
+    free(code->elements);
+    free(code->lang);
+    free(code);
+    break;
   default:
     break;
   }
 
-  int i;
   for (i = 0; i < node->children_count; i++) {
     free_node(node->children[i]);
   }

@@ -232,10 +232,12 @@ parse_aside(Parser* parser)
 Node *
 parse_code(Parser *parser)
 {
-  char c;
+  char c, *value;
   size_t start, lang_start, lang_end, node_start;
   Vec* children;
   TextData* lang;
+  CodeElem *elem;
+  CodeData *data;
   Node* node;
 
   start = parser->idx;
@@ -259,7 +261,8 @@ parse_code(Parser *parser)
     node_start = parser->idx;
 
     if ('\0' == c) {
-      free_nodevec(children);
+      free(children->elems);
+      free(children);
       return NULL;
     }
 
@@ -273,7 +276,13 @@ parse_code(Parser *parser)
         break;
 
       parser->idx = start;
-      push_vec(children, new_node(NODE_NEWLINE, NULL, 0, NULL));
+
+      value = malloc(1);
+      *value = '\n';
+      elem = malloc(sizeof(CodeElem));
+      elem->type = CODE_SPACING;
+      elem->value = value;
+      push_vec(children, elem);
       continue;
     }
 
@@ -293,6 +302,13 @@ parse_code(Parser *parser)
 
         break;
       }
+
+      parser->idx += 1;
+      elem = malloc(sizeof(CodeElem));
+      elem->type = CODE_STRING;
+      elem->value = new_text_data(parser->source, node_start, parser->idx);
+      push_vec(children, elem);
+      continue;
     }
 
     parser->idx += 1;
@@ -300,13 +316,21 @@ parse_code(Parser *parser)
       while (isalnum(parser->source[parser->idx]))
         parser->idx += 1;
     }
-    push_vec(children, new_node(NODE_TEXT, new_text_data(parser->source, node_start, parser->idx), 0, NULL));
+    elem = malloc(sizeof(CodeElem));
+    elem->type = CODE_PLAIN;
+    elem->value = new_text_data(parser->source, node_start, parser->idx);
+    push_vec(children, elem);
   }
 
   lang = NULL;
   if (lang_end > lang_start)
     lang = new_text_data(parser->source, lang_start, lang_end);
-  node = new_node(NODE_CODE, lang, children->length, (Node **) children->elems);
+
+  data = malloc(sizeof(CodeData));
+  data->length = children->length;
+  data->elements = (CodeElem **) children->elems;
+  data->lang = lang;
+  node = new_node(NODE_CODE, data, 0, NULL);
   free(children);
   return node;
 }
