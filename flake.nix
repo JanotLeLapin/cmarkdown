@@ -21,7 +21,6 @@
     devShells = eachSystem ({ pkgs, ... }: { default = pkgs.callPackage ./shell.nix {}; });
     packages = eachSystem ({ system, pkgs, ... }: {
       default = pkgs.callPackage ./default.nix { markdown-config = ./config.def.h; };
-      www = pkgs.callPackage ./www.nix { markdown = self.packages."${system}".default; };
     });
   };
 }
