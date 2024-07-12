@@ -227,7 +227,7 @@ parse_aside(Parser* parser)
   for (;;) {
     linebreaks = 0;
 
-    push(children, parse_inline(parser));
+    push(children, parse_paragraph(parser));
     if ('\0' == parser->source[parser->idx])
       return NULL;
 
