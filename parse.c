@@ -14,9 +14,17 @@ typedef struct {
   Node **nodes;
 } NodeVec;
 
-Node *parse_text(Parser *parser);
-Node *parse_line(Parser *parser);
-Node *parse_inline(Parser *parser);
+Node *
+parse_text(Parser *parser);
+
+Node *
+parse_line(Parser *parser);
+
+Node *
+parse_inline(Parser *parser);
+
+Node *
+parse_paragraph(Parser *parser);
 
 void
 free_nodevec(NodeVec *vec)
@@ -147,10 +155,12 @@ parse_link(Parser *parser)
 Node *
 parse_unordered_list(Parser *parser)
 {
-  NodeVec *vec = new_nodevec(4);
+  NodeVec *children;
+  Node *node;
   char c;
   size_t line_start;
 
+  children = new_nodevec(4);
   for(;;) {
     c = parser->source[parser->idx];
     if ('-' != c)
@@ -158,22 +168,11 @@ parse_unordered_list(Parser *parser)
     parser->idx += 1;
     skip_whitespace(parser);
 
-    line_start = parser->idx;
-    for (;;) {
-      parser->idx += 1;
-      c = parser->source[parser->idx];
-
-      if ('\n' == c || '\0' == c) {
-        parser->idx += 1;
-        break;
-      }
-    }
-
-    push(vec, new_node(NODE_TEXT, new_text_data(parser->source, line_start, parser->idx - 1), 0, NULL));
+    push(children, parse_paragraph(parser));
   }
 
-  Node *node = new_node(NODE_UNORDERED_LIST, NULL, vec->length, vec->nodes);
-  free(vec);
+  node = new_node(NODE_UNORDERED_LIST, NULL, children->length, children->nodes);
+  free(children);
   return node;
 }
 
@@ -297,6 +296,9 @@ parse_paragraph(Parser *parser)
   nodes = new_nodevec(8);
   for (;;) {
     c = parser->source[parser->idx];
+    if ('\n' == c)
+      parser->idx += 1;
+
     if ('\n' == c || '\0' == c)
       break;
 
