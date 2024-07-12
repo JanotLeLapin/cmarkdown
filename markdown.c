@@ -34,6 +34,7 @@ free_node(Node *node)
   case NODE_ROOT:
   case NODE_HEADING:
   case NODE_LINK:
+  case NODE_CODE:
   case NODE_TEXT:
     free(node->value);
     break;
@@ -71,8 +72,10 @@ read_file(char *filename)
   res = malloc(capacity);
   
   file = fopen(filename, "r");
-  if (NULL == file)
+  if (NULL == file) {
+    free(res);
     return NULL;
+  }
 
   offset = 0;
   for (;;) {

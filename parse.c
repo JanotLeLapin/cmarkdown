@@ -266,6 +266,7 @@ parse_code(Parser *parser)
   size_t start, lang_start, lang_end, node_start;
   NodeVec* children;
   TextData* lang;
+  Node* node;
 
   start = parser->idx;
   while ('`' == parser->source[parser->idx])
@@ -317,7 +318,9 @@ parse_code(Parser *parser)
   lang = NULL;
   if (lang_end > lang_start)
     lang = new_text_data(parser->source, lang_start, lang_end);
-  return new_node(NODE_CODE, lang, children->length, children->nodes);
+  node = new_node(NODE_CODE, lang, children->length, children->nodes);
+  free(children);
+  return node;
 }
 
 Node *
