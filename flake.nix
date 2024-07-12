@@ -15,9 +15,12 @@
     }));
   in {
     githubActions = nix-github-actions.lib.mkGithubMatrix { checks = self.packages; };
+    lib = {
+      markdown = eachSystem ({ pkgs, ... }: { config, ... }: pkgs.callPackage ./default.nix { markdown-config = config; });
+    };
     devShells = eachSystem ({ pkgs, ... }: { default = pkgs.callPackage ./shell.nix {}; });
     packages = eachSystem ({ system, pkgs, ... }: {
-      default = pkgs.callPackage ./default.nix {};
+      default = pkgs.callPackage ./default.nix { markdown-config = ./config.def.h; };
       www = pkgs.callPackage ./www.nix { markdown = self.packages."${system}".default; };
     });
   };

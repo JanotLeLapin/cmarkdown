@@ -1,4 +1,5 @@
-{ gcc
+{ markdown-config
+, gcc
 , stdenv
 }: stdenv.mkDerivation {
   pname = "markdown";
@@ -8,10 +9,7 @@
   src = ./.;
 
   buildPhase = ''
-    if [ ! -e config.h ]
-    then
-      cp config.def.h config.h
-    fi
+    cp ${markdown-config} config.h
     gcc markdown.c parse.c html.c -o markdown -std=c99 -Wall
   '';
   installPhase = ''
