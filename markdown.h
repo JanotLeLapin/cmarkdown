@@ -23,7 +23,7 @@ typedef struct Node {
 } Node;
 
 typedef struct {
-  char *text;
+  const char *text;
   size_t length;
 } TextData;
 
@@ -33,7 +33,7 @@ typedef struct {
 } AsideData;
 
 TextData *
-new_text_data(char *source, size_t start, size_t end);
+new_text_data(const char *source, size_t start, size_t end);
 
 Node *
 new_node(NodeType type, void *value, size_t children_count, Node **children);

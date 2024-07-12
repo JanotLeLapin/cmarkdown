@@ -18,7 +18,7 @@ new_node(NodeType type, void *value, size_t children_count, Node **children)
 }
 
 TextData *
-new_text_data(char *text, size_t start, size_t end)
+new_text_data(const char *text, size_t start, size_t end)
 {
   TextData *data;
   data = malloc(sizeof(TextData));

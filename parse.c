@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 typedef struct {
-  char* source;
+  const char* source;
   size_t idx;
 } Parser;
 
