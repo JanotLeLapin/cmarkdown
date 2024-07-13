@@ -301,6 +301,14 @@ parse_code(Parser *parser)
       elem->type = CODE_SPACING;
       elem->value = value;
       push_vec(children, elem);
+    } else if (' ' == c) {
+      skip_whitespace(parser);
+      value = malloc(1);
+      *value = ' ';
+      elem = malloc(sizeof(CodeElem));
+      elem->type = CODE_SPACING;
+      elem->value = value;
+      push_vec(children, elem);
     } else if ('"' == c || '\'' == c || '`' == c) {
       for (;;) {
         parser->idx += 1;
