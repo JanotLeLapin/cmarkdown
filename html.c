@@ -35,13 +35,16 @@ Lang
 get_lang(const char *lang)
 {
   size_t i;
+  Lang d;
 
   for (i = 0; i < sizeof(langs) / sizeof(Lang); i++) {
     if (strcmp(lang, langs[i].lang) == 0)
       return langs[i];
   }
 
-  Lang d = { NULL, {} };
+  d.lang = NULL;
+  d.keywords = malloc(sizeof(char *));
+  d.keywords[0] = NULL;
   return d;
 }
 
@@ -49,9 +52,6 @@ int
 is_keyword(const char *token, Lang lang)
 {
   size_t i;
-
-  if (NULL == lang.lang)
-    return 0;
 
   for (i = 0; lang.keywords[i] != NULL; i++) {
     if (strcmp(token, lang.keywords[i]) == 0)
@@ -279,9 +279,15 @@ compile(HtmlCompiler *compiler, Node *node)
   }
   case NODE_CODE:
     code = node->value;
-    str = from_text_data(code->lang);
-    lang = get_lang(str);
-    free(str);
+    if (NULL == code->lang) {
+      lang.lang = NULL;
+      lang.keywords = malloc(sizeof(char *));
+      lang.keywords[0] = NULL;
+    } else {
+      str = from_text_data(code->lang);
+      lang = get_lang(str);
+      free(str);
+    }
     push_string(s, "<pre class=\"code\">");
     for (i = 0; i < code->length; i++) {
       code_e = code->elements[i];
