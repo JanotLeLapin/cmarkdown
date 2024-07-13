@@ -316,7 +316,9 @@ compile_node(Node *node)
   compiler->heading_count = 0;
   compiler->headings = malloc(sizeof(Heading) * 32);
 
+  push_string(s, "<main>");
   compile(compiler, node);
+  push_string(s, "</main>");
   compile_toc(compiler);
   
   res = s->value;
