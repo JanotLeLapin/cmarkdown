@@ -162,9 +162,10 @@ from_text_data(TextData *data)
 }
 
 void
-compile_str(String *s, Node *node)
+compile_inner(String *s, Node *node)
 {
   char* text;
+  size_t i;
 
   switch (node->type) {
   case NODE_TEXT: {
@@ -173,9 +174,14 @@ compile_str(String *s, Node *node)
     free(text);
     break;
   }
-  case NODE_NEWLINE:
-    push_string(s, "<br>");
-    break;
+  case NODE_PARAGRAPH:
+  case NODE_HEADING:
+  case NODE_LINK:
+  case NODE_UNORDERED_LIST:
+  case NODE_ASIDE:
+    for (i = 0; i < node->children_count; i++) {
+      compile_inner(s, node->children[i]);
+    }
   default:
     break;
   }
@@ -212,7 +218,7 @@ compile(HtmlCompiler *compiler, Node *node)
     level = *((uint8_t*) node->value);
     text = new_string(32);
     for (i = 0; i < node->children_count; i++) {
-      compile_str(text, node->children[i]);
+      compile_inner(text, node->children[i]);
     }
 
     heading = malloc(sizeof(Heading));
@@ -227,7 +233,9 @@ compile(HtmlCompiler *compiler, Node *node)
     push_string(s, " id=\"");
     push_string(s, heading->id);
     push_string(s, "\">");
-    push_string(s, text->value);
+    for (i = 0; i < node->children_count; i++) {
+      compile(compiler, node->children[i]);
+    }
     push_string(s, "</h");
     push_char(s, '0' + level);
     push_char(s, '>');
@@ -316,8 +324,15 @@ compile(HtmlCompiler *compiler, Node *node)
       }
     }
     push_string(s, "</pre>");
-  default:
-    compile_str(compiler->string, node);
+    break;
+  case NODE_TEXT: {
+    str = from_text_data(node->value);
+    push_string(s, str);
+    free(str);
+    break;
+  }
+  case NODE_NEWLINE:
+    push_string(s, "<br>");
     break;
   }
 }
