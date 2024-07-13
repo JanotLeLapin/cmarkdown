@@ -56,7 +56,6 @@ free_node(Node *node)
       free(code->elements[i]);
     }
     free(code->elements);
-    free(code->lang);
     free(code);
     break;
   default:

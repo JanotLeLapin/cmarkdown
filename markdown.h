@@ -17,6 +17,7 @@ typedef enum {
 
 typedef enum {
   CODE_STRING,
+  CODE_KEYWORD,
   CODE_SPACING,
   CODE_PLAIN,
 } CodeElemType;
@@ -46,8 +47,12 @@ typedef struct {
 typedef struct {
   size_t length;
   CodeElem **elements;
-  TextData *lang;
 } CodeData;
+
+typedef struct {
+  const char *lang;
+  const char **keywords;
+} Lang;
 
 TextData *
 new_text_data(const char *source, size_t start, size_t end);

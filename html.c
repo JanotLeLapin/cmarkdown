@@ -6,11 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct {
-  char *lang;
-  char **keywords;
-} Lang;
-
 #include "config.h"
 
 typedef struct {
@@ -30,35 +25,6 @@ typedef struct {
   size_t heading_count;
   Heading **headings;
 } HtmlCompiler;
-
-Lang
-get_lang(const char *lang)
-{
-  size_t i;
-  Lang d;
-
-  for (i = 0; i < sizeof(langs) / sizeof(Lang); i++) {
-    if (strcmp(lang, langs[i].lang) == 0)
-      return langs[i];
-  }
-
-  d.lang = NULL;
-  d.keywords = malloc(sizeof(char *));
-  d.keywords[0] = NULL;
-  return d;
-}
-
-int
-is_keyword(const char *token, Lang lang)
-{
-  size_t i;
-
-  for (i = 0; lang.keywords[i] != NULL; i++) {
-    if (strcmp(token, lang.keywords[i]) == 0)
-      return 1;
-  }
-  return 0;
-}
 
 char *
 to_kebabcase(const char *input)
@@ -198,7 +164,6 @@ compile(HtmlCompiler *compiler, Node *node)
   AsideData *aside;
   CodeData *code;
   CodeElem *code_e;
-  Lang lang;
 
   s = compiler->string;
   switch (node->type) {
@@ -287,41 +252,27 @@ compile(HtmlCompiler *compiler, Node *node)
   }
   case NODE_CODE:
     code = node->value;
-    if (NULL == code->lang) {
-      lang.lang = NULL;
-      lang.keywords = malloc(sizeof(char *));
-      lang.keywords[0] = NULL;
-    } else {
-      str = from_text_data(code->lang);
-      lang = get_lang(str);
-      free(str);
-    }
     push_string(s, "<pre class=\"code\">");
     for (i = 0; i < code->length; i++) {
       code_e = code->elements[i];
       switch (code_e->type) {
       case CODE_STRING:
         push_string(s, "<span class=\"c-s\">");
-        str = from_text_data(code_e->value);
-        push_string(s, str);
-        free(str);
-        push_string(s, "</span>");
+        break;
+      case CODE_KEYWORD:
+        push_string(s, "<span class=\"c-k\">");
         break;
       case CODE_PLAIN:
-        str = from_text_data(code_e->value);
-        if (is_keyword(str, lang))
-          push_string(s, "<span class=\"c-k\">");
-        else
-          push_string(s, "<span>");
-
-        push_string(s, str);
-        free(str);
-        push_string(s, "</span>");
+        push_string(s, "<span>");
         break;
       case CODE_SPACING:
         push_char(s, ((char *) code_e->value)[0]);
-        break;
+        continue;
       }
+      str = from_text_data(code_e->value);
+      push_string(s, str);
+      free(str);
+      push_string(s, "</span>");
     }
     push_string(s, "</pre>");
     break;

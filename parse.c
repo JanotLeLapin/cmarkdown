@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "config.h"
+
+static const char *no_kw[] = { NULL };
+
 typedef struct {
   const char* source;
   size_t idx;
@@ -233,9 +237,9 @@ Node *
 parse_code(Parser *parser)
 {
   char c, *value;
-  size_t start, lang_start, lang_end, node_start;
+  size_t start, lang_start, lang_end, i, j, node_start;
+  Lang lang;
   Vec* children;
-  TextData* lang;
   CodeElem *elem;
   CodeData *data;
   Node* node;
@@ -252,10 +256,26 @@ parse_code(Parser *parser)
     parser->idx += 1;
   lang_end = parser->idx;
 
+  lang.lang = NULL;
+  lang.keywords = no_kw;
+  for (i = 0; i < sizeof(langs) / sizeof(Lang) && NULL == lang.lang; i++) {
+    for (j = 0;; j++) {
+      if ('\0' == langs[i].lang[j] && '\n' == parser->source[lang_start + j]) {
+        lang.lang = langs[i].lang;
+        lang.keywords = langs[i].keywords;
+        break;
+      }
+
+      if (langs[i].lang[j] != parser->source[lang_start + j] || '\0' == langs[i].lang[j] || '\n' == parser->source[lang_start + j])
+        break;
+    }
+  }
+
   parser->idx += 1;
   children = new_vec(16);
 
   for (;;) {
+    elem = NULL;
     c = parser->source[parser->idx];
 
     node_start = parser->idx;
@@ -264,9 +284,7 @@ parse_code(Parser *parser)
       free(children->elems);
       free(children);
       return NULL;
-    }
-
-    if ('\n' == c) {
+    } else if ('\n' == c) {
       parser->idx += 1;
       start = parser->idx;
       while ('`' == parser->source[parser->idx])
@@ -283,10 +301,7 @@ parse_code(Parser *parser)
       elem->type = CODE_SPACING;
       elem->value = value;
       push_vec(children, elem);
-      continue;
-    }
-
-    if ('"' == c || '\'' == c || '`' == c) {
+    } else if ('"' == c || '\'' == c || '`' == c) {
       for (;;) {
         parser->idx += 1;
         switch (parser->source[parser->idx]) {
@@ -308,28 +323,40 @@ parse_code(Parser *parser)
       elem->type = CODE_STRING;
       elem->value = new_text_data(parser->source, node_start, parser->idx);
       push_vec(children, elem);
-      continue;
-    }
+    } else {
+      for (i = 0; NULL != lang.keywords[i]; i++) {
+        for (j = 0;; j++) {
+          if ('\0' == lang.keywords[i][j]) {
+            elem = malloc(sizeof(CodeElem));
+            elem->type = CODE_KEYWORD;
+            elem->value = new_text_data(parser->source, node_start, node_start + j);
+            parser->idx = node_start + j;
+            break;
+          }
 
-    parser->idx += 1;
-    if (isalnum(c)) {
-      while (isalnum(parser->source[parser->idx]))
-        parser->idx += 1;
+          if (lang.keywords[i][j] != parser->source[node_start + j] || '\0' == parser->source[node_start + j])
+            break;
+        }
+      }
+
+      if (NULL == elem) {
+        if (isalnum(c)) {
+          while (isalnum(parser->source[parser->idx]))
+            parser->idx += 1;
+        } else {
+          parser->idx += 1;
+        }
+        elem = malloc(sizeof(CodeElem));
+        elem->type = CODE_PLAIN;
+        elem->value = new_text_data(parser->source, node_start, parser->idx);
+      }
+      push_vec(children, elem);
     }
-    elem = malloc(sizeof(CodeElem));
-    elem->type = CODE_PLAIN;
-    elem->value = new_text_data(parser->source, node_start, parser->idx);
-    push_vec(children, elem);
   }
-
-  lang = NULL;
-  if (lang_end > lang_start)
-    lang = new_text_data(parser->source, lang_start, lang_end);
 
   data = malloc(sizeof(CodeData));
   data->length = children->length;
   data->elements = (CodeElem **) children->elems;
-  data->lang = lang;
   node = new_node(NODE_CODE, data, 0, NULL);
   free(children);
   return node;
