@@ -337,7 +337,7 @@ compile(HtmlCompiler *compiler, Node *node)
   }
 }
 
-#ifdef TOC
+#if TOC == 1
 void
 compile_toc(HtmlCompiler *compiler)
 {
