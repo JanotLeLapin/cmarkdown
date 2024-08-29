@@ -2,6 +2,7 @@ typedef typeof(sizeof(0)) size_t;
 
 enum CMarkNodeType {
   CMARK_ROOT,
+  CMARK_NULL,
   
   CMARK_HEADER,
 
@@ -15,7 +16,7 @@ struct CMarkNodeHeaderData {
 union CMarkNodeData {
   struct CMarkNodeHeaderData header;
   char *plain;
-  char root;
+  char null;
 };
 
 struct CMarkNode {

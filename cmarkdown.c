@@ -84,6 +84,10 @@ parse_inline(struct CMarkContext *ctx)
   }
 
   len = ctx->i - start;
+  if (!len) {
+    return create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
+  }
+  
   data.plain = malloc(len + 1);
   strncpy(data.plain, ctx->buffer + start, len);
   data.plain[len] = '\0';
@@ -115,7 +119,7 @@ parse_header(struct CMarkContext *ctx)
 struct CMarkNode
 parse(struct CMarkContext *ctx)
 {
-  struct CMarkNode root = create_node(CMARK_ROOT, (union CMarkNodeData) { .root = 0 }, 8);
+  struct CMarkNode root = create_node(CMARK_ROOT, (union CMarkNodeData) { .null = 0 }, 8);
 
   read_line(ctx);
   add_child(&root, parse_header(ctx));
@@ -128,7 +132,7 @@ main()
 {
   FILE *file;
   struct CMarkContext *ctx;
-  struct CMarkNode root, node;
+  struct CMarkNode root, node, child;
   size_t i, j;
 
   file = fopen("file.md", "r");
@@ -141,7 +145,18 @@ main()
       case CMARK_HEADER:
         printf("Found header of level %d\n", node.data.header.level);
         for (j = 0; j < node.children_count; j++) {
-          printf(" '%s'\n", node.children[j].data.plain);
+          child = node.children[j];
+          switch (child.type) {
+            case CMARK_PLAIN:
+              printf(" '%s'\n", node.children[j].data.plain);
+              break;
+            case CMARK_NULL:
+              printf(" empty node\n");
+              break;
+            default:
+              printf(" other\n");
+              break;
+          }
         }
         break;
       default:
