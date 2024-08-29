@@ -146,6 +146,36 @@ parse(struct CMarkContext *ctx)
   return root;
 }
 
+void
+print_node(struct CMarkNode node, int depth)
+{
+  char margin[16];
+  size_t i;
+
+  for (i = 0; i < depth; i++) {
+    margin[i] = ' ';
+  }
+  margin[depth] = '\0';
+  
+  switch (node.type) {
+    case CMARK_ROOT:
+      printf("%sRoot\n", margin);
+      break;
+    case CMARK_HEADER:
+      printf("%sHeader (%d)\n", margin, node.data.header.level);
+      break;
+    case CMARK_PLAIN:
+      printf("%sText ('%s')\n", margin, node.data.plain);
+      break;
+    default:
+      break;
+  }
+
+  for (i = 0; i < node.children_count; i++) {
+    print_node(node.children[i], depth + 1);
+  }
+}
+
 int
 main()
 {
@@ -158,31 +188,7 @@ main()
   ctx = create_context(file);
   root = parse(ctx);
 
-  for (i = 0; i < root.children_count; i++) {
-    node = root.children[i];
-    switch (node.type) {
-      case CMARK_HEADER:
-        printf("Found header of level %d\n", node.data.header.level);
-        for (j = 0; j < node.children_count; j++) {
-          child = node.children[j];
-          switch (child.type) {
-            case CMARK_PLAIN:
-              printf(" '%s'\n", node.children[j].data.plain);
-              break;
-            case CMARK_NULL:
-              printf(" empty node\n");
-              break;
-            default:
-              printf(" other\n");
-              break;
-          }
-        }
-        break;
-      default:
-        printf("not a header\n");
-        break;
-    }
-  }
+  print_node(root, 0);
 
   free(ctx);
   fclose(file);
