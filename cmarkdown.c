@@ -68,12 +68,25 @@ struct CMarkNode
 parse_inline(struct CMarkContext *ctx)
 {
   union CMarkNodeData data;
-  char *ptr = ctx->buffer + ctx->i;
-  size_t len;
+  size_t start = ctx->i, len;
 
-  len = strlen(ptr);
-  data.plain = malloc(len);
-  strncpy(data.plain, ptr, len - 1);
+  while (1) {
+    switch (ctx->buffer[ctx->i]) {
+      case '\n':
+      case '\t':
+      case ' ':
+        break;
+      default:
+        ctx->i++;
+        continue;
+    }
+    break;
+  }
+
+  len = ctx->i - start;
+  data.plain = malloc(len + 1);
+  strncpy(data.plain, ctx->buffer + start, len);
+  data.plain[len] = '\0';
 
   return create_node(CMARK_PLAIN, data, 0);
 }
@@ -82,7 +95,7 @@ struct CMarkNode
 parse_header(struct CMarkContext *ctx)
 {
   union CMarkNodeData data;
-  struct CMarkNode node, child;
+  struct CMarkNode node;
   size_t start = ctx->i;
  
   while ('#' == ctx->buffer[ctx->i]) {
@@ -90,10 +103,12 @@ parse_header(struct CMarkContext *ctx)
   }
   data.header.level = (unsigned char) (ctx->i - start);
 
-  child = parse_inline(ctx);
+  node = create_node(CMARK_HEADER, data, 4);
+  while ('\n' != ctx->buffer[ctx->i]) {
+    ctx->i++;
+    add_child(&node, parse_inline(ctx));
+  }
 
-  node = create_node(CMARK_HEADER, data, 1);
-  add_child(&node, child);
   return node;
 }
 
@@ -114,7 +129,7 @@ main()
   FILE *file;
   struct CMarkContext *ctx;
   struct CMarkNode root, node;
-  size_t i;
+  size_t i, j;
 
   file = fopen("file.md", "r");
   ctx = create_context(file);
@@ -124,7 +139,10 @@ main()
     node = root.children[i];
     switch (node.type) {
       case CMARK_HEADER:
-        printf("Found header of level %d with: '%s'\n", node.data.header.level, node.children[0].data.plain);
+        printf("Found header of level %d\n", node.data.header.level);
+        for (j = 0; j < node.children_count; j++) {
+          printf(" '%s'\n", node.children[j].data.plain);
+        }
         break;
       default:
         break;
