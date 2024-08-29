@@ -117,12 +117,31 @@ parse_header(struct CMarkContext *ctx)
 }
 
 struct CMarkNode
+parse_line(struct CMarkContext *ctx)
+{
+  union CMarkNodeData data;
+  struct CMarkNode node;
+  size_t start = ctx->i;
+
+  switch (ctx->buffer[ctx->i]) {
+    case '#':
+      return parse_header(ctx);
+    default:
+      return create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
+  }
+}
+
+struct CMarkNode
 parse(struct CMarkContext *ctx)
 {
   struct CMarkNode root = create_node(CMARK_ROOT, (union CMarkNodeData) { .null = 0 }, 8);
 
-  read_line(ctx);
-  add_child(&root, parse_header(ctx));
+  while (1) {
+    read_line(ctx);
+    if (feof(ctx->file))
+      break;
+    add_child(&root, parse_line(ctx));
+  }
 
   return root;
 }
@@ -160,6 +179,7 @@ main()
         }
         break;
       default:
+        printf("not a header\n");
         break;
     }
   }
