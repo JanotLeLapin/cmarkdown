@@ -40,7 +40,7 @@ add_child(struct CMarkNode *node, struct CMarkNode child)
 }
 
 void
-free_node(struct CMarkNode node)
+cmark_free_node(struct CMarkNode node)
 {
   size_t i;
 
@@ -56,13 +56,13 @@ free_node(struct CMarkNode node)
   }
 
   for (i = 0; i < node.children_count; i++) {
-    free_node(node.children[i]);
+    cmark_free_node(node.children[i]);
   }
   free(node.children);
 }
 
 struct CMarkContext *
-create_context(void *file)
+cmark_create_context(void *file)
 {
   struct CMarkContext *ctx = malloc(sizeof(struct CMarkContext));
   ctx->file = file;
@@ -249,7 +249,7 @@ parse_line(struct CMarkContext *ctx)
 }
 
 struct CMarkNode
-parse(struct CMarkContext *ctx)
+cmark_parse(struct CMarkContext *ctx)
 {
   struct CMarkNode root = create_node(CMARK_ROOT, (union CMarkNodeData) { .null = 0 }, 8);
 
@@ -315,14 +315,14 @@ main()
   size_t i, j;
 
   file = fopen("file.md", "r");
-  ctx = create_context(file);
-  root = parse(ctx);
+  ctx = cmark_create_context(file);
+  root = cmark_parse(ctx);
 
   print_node(root, 0);
 
   free(ctx);
   fclose(file);
-  free_node(root);
+  cmark_free_node(root);
   
   return 0;
 }

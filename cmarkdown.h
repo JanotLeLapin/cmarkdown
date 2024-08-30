@@ -43,9 +43,6 @@ struct CMarkContext {
   size_t i;
 };
 
-struct CMarkNode create_node(enum CMarkNodeType type, union CMarkNodeData data, size_t initial_size);
-void add_child(struct CMarkNode *node, struct CMarkNode child);
-void free_node(struct CMarkNode node);
-
-struct CMarkContext *create_context(void *file);
-struct CMarkNode parse(struct CMarkContext *ctx);
+struct CMarkContext *cmark_create_context(void *file);
+struct CMarkNode cmark_parse(struct CMarkContext *ctx);
+void cmark_free_node(struct CMarkNode node);
