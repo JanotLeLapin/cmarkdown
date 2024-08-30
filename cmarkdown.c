@@ -241,6 +241,8 @@ parse_line(struct CMarkContext *ctx)
   switch (ctx->buffer[ctx->i]) {
     case '#':
       return parse_header(ctx);
+    case '\n':
+      return create_node(CMARK_BREAK, (union CMarkNodeData) { .null = 0 }, 0);
     default:
       return parse_paragraph(ctx);
   }
@@ -293,6 +295,9 @@ print_node(struct CMarkNode node, int depth)
       break;
     case CMARK_WHITESPACE:
       printf("%sWhitespace\n", margin);
+      break;
+    case CMARK_BREAK:
+      printf("%sBreak\n", margin);
       break;
   }
 
