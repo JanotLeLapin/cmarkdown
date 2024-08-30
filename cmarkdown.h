@@ -6,6 +6,7 @@ enum CMarkNodeType {
   
   CMARK_HEADER,
 
+  CMARK_ANCHOR,
   CMARK_PLAIN,
 };
 
@@ -13,8 +14,13 @@ struct CMarkNodeHeaderData {
   unsigned char level;
 };
 
+struct CMarkNodeAnchorData {
+  char *href;
+};
+
 union CMarkNodeData {
   struct CMarkNodeHeaderData header;
+  struct CMarkNodeAnchorData anchor;
   char *plain;
   char null;
 };

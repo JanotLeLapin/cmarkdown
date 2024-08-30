@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define create_empty_node() create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
+
 struct CMarkNode
 create_node(enum CMarkNodeType type, union CMarkNodeData data, size_t initial_size)
 {
@@ -39,8 +41,15 @@ free_node(struct CMarkNode node)
 {
   size_t i;
 
-  if (CMARK_PLAIN == node.type) {
-    free(node.data.plain);
+  switch (node.type) {
+    case CMARK_ANCHOR:
+      free(node.data.anchor.href);
+      break;
+    case CMARK_PLAIN:
+      free(node.data.plain);
+      break;
+    default:
+      break;
   }
 
   for (i = 0; i < node.children_count; i++) {
@@ -65,7 +74,7 @@ read_line(struct CMarkContext *ctx)
 }
 
 struct CMarkNode
-parse_inline(struct CMarkContext *ctx)
+parse_plain(struct CMarkContext *ctx)
 {
   union CMarkNodeData data;
   size_t start = ctx->i, len;
@@ -75,6 +84,7 @@ parse_inline(struct CMarkContext *ctx)
       case '\n':
       case '\t':
       case ' ':
+      case ']':
         break;
       default:
         ctx->i++;
@@ -85,7 +95,7 @@ parse_inline(struct CMarkContext *ctx)
 
   len = ctx->i - start;
   if (!len) {
-    return create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
+    return create_empty_node();
   }
   
   data.plain = malloc(len + 1);
@@ -93,6 +103,82 @@ parse_inline(struct CMarkContext *ctx)
   data.plain[len] = '\0';
 
   return create_node(CMARK_PLAIN, data, 0);
+}
+
+struct CMarkNode
+parse_anchor(struct CMarkContext *ctx)
+{
+  struct CMarkNode node;
+  union CMarkNodeData data;
+  size_t start = ctx->i, href_len, href_start;
+  char *href;
+
+  node.children_size = 4;
+  node.children_count = 0;
+  node.children = malloc(sizeof(struct CMarkNode) * 4);
+  node.type = CMARK_ANCHOR;
+
+  while (1) {
+    ctx->i++;
+    add_child(&node, parse_plain(ctx));
+    switch (ctx->buffer[ctx->i]) {
+      case ']':
+        break;
+      case '\n':
+        free(node.children);
+        return create_empty_node();
+      default:
+        continue;
+    }
+    break;
+  }
+
+  ctx->i++;
+  if ('(' != ctx->buffer[ctx->i]) {
+    free(node.children);
+    return create_empty_node();
+  }
+
+  href_start = ctx->i + 1;
+  while (1) {
+    ctx->i++;
+    switch (ctx->buffer[ctx->i]) {
+      case ')':
+        break;
+      case '\n':
+        free(node.children);
+        return create_empty_node();
+      default:
+        continue;
+    }
+    break;
+  }
+
+  href_len = ctx->i - href_start;
+  if (!href_len) {
+    free(node.children);
+    return create_empty_node();
+  }
+
+  data.anchor.href = malloc(href_len + 1);
+  strncpy(data.anchor.href, ctx->buffer + href_start, href_len);
+  data.anchor.href[href_len] = '\0';
+  node.data = data;
+
+  ctx->i++;
+
+  return node;
+}
+
+struct CMarkNode
+parse_inline(struct CMarkContext *ctx)
+{
+  switch (ctx->buffer[ctx->i]) {
+    case '[':
+      return parse_anchor(ctx);
+    default:
+      return parse_plain(ctx);
+  }
 }
 
 struct CMarkNode
@@ -127,7 +213,7 @@ parse_line(struct CMarkContext *ctx)
     case '#':
       return parse_header(ctx);
     default:
-      return create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
+      return create_empty_node();
   }
 }
 
@@ -164,10 +250,14 @@ print_node(struct CMarkNode node, int depth)
     case CMARK_HEADER:
       printf("%sHeader (%d)\n", margin, node.data.header.level);
       break;
+    case CMARK_ANCHOR:
+      printf("%sAnchor (%s)\n", margin, node.data.anchor.href);
+      break;
     case CMARK_PLAIN:
       printf("%sText ('%s')\n", margin, node.data.plain);
       break;
-    default:
+    case CMARK_NULL:
+      printf("%sNull\n", margin);
       break;
   }
 
