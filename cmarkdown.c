@@ -31,7 +31,8 @@ add_child(struct CMarkNode *node, struct CMarkNode child)
   }
 
   if (node->children_count >= node->children_size) {
-    node->children = realloc(node->children, sizeof(struct CMarkNode) * node->children_size * 2);
+    node->children_size *= 2;
+    node->children = realloc(node->children, sizeof(struct CMarkNode) * node->children_size);
   }
 
   node->children[node->children_count] = child;
