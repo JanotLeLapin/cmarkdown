@@ -196,7 +196,6 @@ parse_header(struct CMarkContext *ctx)
   node = create_node(CMARK_HEADER, data, 4);
   ctx->i++;
   while ('\n' != ctx->buffer[ctx->i]) {
-    ctx->i++;
     add_child(&node, parse_inline(ctx));
   }
 
