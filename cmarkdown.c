@@ -6,6 +6,8 @@
 
 #define create_empty_node() create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
 
+struct CMarkNode parse_inline(struct CMarkContext *ctx);
+
 struct CMarkNode
 create_node(enum CMarkNodeType type, union CMarkNodeData data, size_t initial_size)
 {
@@ -83,6 +85,7 @@ parse_plain(struct CMarkContext *ctx)
     switch (ctx->buffer[ctx->i]) {
       case '\n':
       case '\t':
+      case ' ':
       case '[':
       case ']':
         break;
@@ -118,9 +121,9 @@ parse_anchor(struct CMarkContext *ctx)
   node.children = malloc(sizeof(struct CMarkNode) * 4);
   node.type = CMARK_ANCHOR;
 
+  ctx->i++;
   while (1) {
-    ctx->i++;
-    add_child(&node, parse_plain(ctx));
+    add_child(&node, parse_inline(ctx));
     switch (ctx->buffer[ctx->i]) {
       case ']':
         break;
@@ -166,7 +169,6 @@ parse_anchor(struct CMarkContext *ctx)
   node.data = data;
 
   ctx->i++;
-
   return node;
 }
 
@@ -176,6 +178,12 @@ parse_inline(struct CMarkContext *ctx)
   switch (ctx->buffer[ctx->i]) {
     case '[':
       return parse_anchor(ctx);
+    case ' ':
+    case '\t':
+      while (' ' == ctx->buffer[ctx->i] || '\t' == ctx->buffer[ctx->i]) {
+        ctx->i++;
+      }
+      return create_node(CMARK_WHITESPACE, (union CMarkNodeData) { .null = 0 }, 0);
     default:
       return parse_plain(ctx);
   }
@@ -281,6 +289,9 @@ print_node(struct CMarkNode node, int depth)
       break;
     case CMARK_NULL:
       printf("%sNull\n", margin);
+      break;
+    case CMARK_WHITESPACE:
+      printf("%sWhitespace\n", margin);
       break;
   }
 

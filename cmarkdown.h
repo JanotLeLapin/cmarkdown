@@ -9,6 +9,8 @@ enum CMarkNodeType {
 
   CMARK_ANCHOR,
   CMARK_PLAIN,
+
+  CMARK_WHITESPACE,
 };
 
 struct CMarkNodeHeaderData {
