@@ -8,10 +8,13 @@
   src = ./.;
 
   buildPhase = ''
-    gcc cmarkdown.c -o cmarkdown
+    gcc -c cmarkdown.c -o cmarkdown.o
+    gcc -shared -o libcmarkdown.so cmarkdown.o
   '';
   installPhase = ''
-    mkdir -p $out/bin
-    cp cmarkdown $out/bin
+    mkdir -p $out/lib
+    mkdir -p $out/include
+    cp libcmarkdown.so $out/lib
+    cp cmarkdown.h $out/include
   '';
 }
