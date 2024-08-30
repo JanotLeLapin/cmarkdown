@@ -83,7 +83,7 @@ parse_plain(struct CMarkContext *ctx)
     switch (ctx->buffer[ctx->i]) {
       case '\n':
       case '\t':
-      case ' ':
+      case '[':
       case ']':
         break;
       default:
@@ -194,6 +194,7 @@ parse_header(struct CMarkContext *ctx)
   data.header.level = (unsigned char) (ctx->i - start);
 
   node = create_node(CMARK_HEADER, data, 4);
+  ctx->i++;
   while ('\n' != ctx->buffer[ctx->i]) {
     ctx->i++;
     add_child(&node, parse_inline(ctx));
