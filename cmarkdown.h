@@ -5,6 +5,7 @@ enum CMarkNodeType {
   CMARK_NULL,
   
   CMARK_HEADER,
+  CMARK_PARAGRAPH,
 
   CMARK_ANCHOR,
   CMARK_PLAIN,

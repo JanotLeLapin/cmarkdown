@@ -203,6 +203,26 @@ parse_header(struct CMarkContext *ctx)
 }
 
 struct CMarkNode
+parse_paragraph(struct CMarkContext *ctx)
+{
+  struct CMarkNode node = create_node(CMARK_PARAGRAPH, (union CMarkNodeData) { .null = 0 }, 8);
+
+  while (1) {
+    switch (ctx->buffer[ctx->i]) {
+      case '\n':
+        break;
+      default:
+        add_child(&node, parse_inline(ctx));
+        continue;
+    }
+    break;
+  }
+
+  ctx->i++;
+  return node;
+}
+
+struct CMarkNode
 parse_line(struct CMarkContext *ctx)
 {
   union CMarkNodeData data;
@@ -213,7 +233,7 @@ parse_line(struct CMarkContext *ctx)
     case '#':
       return parse_header(ctx);
     default:
-      return create_empty_node();
+      return parse_paragraph(ctx);
   }
 }
 
@@ -249,6 +269,9 @@ print_node(struct CMarkNode node, int depth)
       break;
     case CMARK_HEADER:
       printf("%sHeader (%d)\n", margin, node.data.header.level);
+      break;
+    case CMARK_PARAGRAPH:
+      printf("%sParagraph\n", margin);
       break;
     case CMARK_ANCHOR:
       printf("%sAnchor (%s)\n", margin, node.data.anchor.href);
