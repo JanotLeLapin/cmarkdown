@@ -123,7 +123,6 @@ parse_plain(struct CMarkContext *ctx)
     switch (ctx->buffer[ctx->i]) {
       case '\n':
       case '\t':
-      case ' ':
         break;
       case '[':
         if (is_anchor(ctx))
