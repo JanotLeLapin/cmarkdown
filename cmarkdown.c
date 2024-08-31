@@ -177,7 +177,7 @@ struct CMarkNode
 parse_code(struct CMarkContext *ctx)
 {
   struct CMarkNode node;
-  size_t start = ctx->i, content_start;
+  size_t start = ctx->i, content_l, content_s;
   char *lang = NULL, *content;
 
   if (!strncmp(ctx->buffer + start, "```", 3)) {
@@ -193,7 +193,9 @@ parse_code(struct CMarkContext *ctx)
     }
 
     content = malloc(256);
+    content_s = 256;
     content[0] = '\0';
+    content_l = 1;
 
     while (1) {
       read_line(ctx);
@@ -202,13 +204,25 @@ parse_code(struct CMarkContext *ctx)
         break;
       }
 
+      while ('\n' != ctx->buffer[ctx->i]) {
+        ctx->i++;
+      }
+      content_l += ctx->i + 1;
+      printf("line: %ld\n", ctx->i + 1);
+
+      if (content_s <= content_l) {
+        content_s += 256;
+        content = realloc(content, content_s);
+      }
+
       strcat(content, ctx->buffer);
     }
+    printf("total: %ld\n", content_l);
 
     return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = lang, .code.content = content }, 0);
   } else {
     ctx->i += 1;
-    content_start = ctx->i;
+    content_s = ctx->i;
     if ('`' == ctx->buffer[ctx->i]) {
       return create_node(CMARK_CODE, DATA_NULL, 0);
     }
@@ -217,8 +231,8 @@ parse_code(struct CMarkContext *ctx)
       ctx->i++;
     }
 
-    content = malloc(ctx->i - content_start + 1);
-    strncpy(content, ctx->buffer + content_start, ctx->i - content_start);
+    content = malloc(ctx->i - content_s + 1);
+    strncpy(content, ctx->buffer + content_s, ctx->i - content_s);
     content[ctx->i] = '\0';
 
     ctx->i++;
