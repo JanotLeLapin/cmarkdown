@@ -183,6 +183,7 @@ parse_code(struct CMarkContext *ctx)
 
   data.lang[0] = '\0';
   if (!strncmp(ctx->buffer + start, "```", 3)) {
+    data.is_block = 1;
     ctx->i += 3;
     while ('\n' != ctx->buffer[ctx->i]) {
       ctx->i++;
@@ -220,6 +221,7 @@ parse_code(struct CMarkContext *ctx)
 
     return create_node(CMARK_CODE, (union CMarkNodeData) { .code = data }, 0);
   } else {
+    data.is_block = 0;
     ctx->i += 1;
     content_s = ctx->i;
     if ('`' == ctx->buffer[ctx->i]) {

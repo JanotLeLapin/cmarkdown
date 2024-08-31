@@ -26,6 +26,7 @@ struct CMarkNodeAnchorData {
 struct CMarkNodeCodeData {
   char lang[16];
   char *content;
+  char is_block;
 };
 
 union CMarkNodeData {
