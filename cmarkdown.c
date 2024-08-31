@@ -68,6 +68,7 @@ cmark_create_context(void *file)
 {
   struct CMarkContext *ctx = malloc(sizeof(struct CMarkContext));
   ctx->file = file;
+  ctx->in_anchor = 0;
   return ctx;
 }
 
@@ -76,6 +77,40 @@ read_line(struct CMarkContext *ctx)
 {
   fgets(ctx->buffer, sizeof(ctx->buffer), ctx->file);
   ctx->i = 0;
+}
+
+char is_anchor(struct CMarkContext *ctx)
+{
+  size_t i = ctx->i + 1;
+  char c;
+
+  while (1) {
+    c = ctx->buffer[i];
+    if ('\n' == ctx->buffer[i])
+      return 0;
+
+    if (']' == c)
+      break;
+
+    i++;
+  }
+
+  i++;
+  if ('(' != ctx->buffer[i])
+    return 0;
+
+  while (1) {
+    c = ctx->buffer[i];
+    if ('\n' == ctx->buffer[i])
+      return 0;
+
+    if (')' == c)
+      break;
+
+    i++;
+  }
+
+  return 1;
 }
 
 struct CMarkNode
@@ -89,9 +124,19 @@ parse_plain(struct CMarkContext *ctx)
       case '\n':
       case '\t':
       case ' ':
-      case '[':
-      case ']':
         break;
+      case '[':
+        if (is_anchor(ctx))
+          break;
+
+        ctx->i++;
+        continue;
+      case ']':
+        if (ctx->in_anchor)
+          break;
+
+        ctx->i++;
+        continue;
       default:
         ctx->i++;
         continue;
@@ -125,6 +170,7 @@ parse_anchor(struct CMarkContext *ctx)
   node.type = CMARK_ANCHOR;
 
   ctx->i++;
+  ctx->in_anchor = 1;
   while (1) {
     add_child(&node, parse_inline(ctx));
     switch (ctx->buffer[ctx->i]) {
@@ -140,6 +186,7 @@ parse_anchor(struct CMarkContext *ctx)
   }
 
   ctx->i++;
+  ctx->in_anchor = 0;
   if ('(' != ctx->buffer[ctx->i]) {
     free(node.children);
     return create_node(CMARK_NULL, DATA_NULL, 0);
@@ -246,7 +293,10 @@ parse_inline(struct CMarkContext *ctx)
 {
   switch (ctx->buffer[ctx->i]) {
     case '[':
-      return parse_anchor(ctx);
+      if (is_anchor(ctx))
+        return parse_anchor(ctx);
+      else
+        return parse_plain(ctx);
     case '`':
       return parse_code(ctx);
     case ' ':

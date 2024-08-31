@@ -49,6 +49,8 @@ struct CMarkContext {
   void *file;
   char buffer[512];
   size_t i;
+
+  char in_anchor;
 };
 
 struct CMarkContext *cmark_create_context(void *file);
