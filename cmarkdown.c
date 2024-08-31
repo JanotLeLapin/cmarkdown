@@ -52,7 +52,6 @@ cmark_free_node(struct CMarkNode node)
       free(node.data.plain);
       break;
     case CMARK_CODE:
-      free(node.data.code.lang);
       free(node.data.code.content);
     default:
       break;
@@ -179,9 +178,10 @@ parse_anchor(struct CMarkContext *ctx)
 struct CMarkNode
 parse_code(struct CMarkContext *ctx)
 {
+  struct CMarkNodeCodeData data;
   size_t start = ctx->i, content_l, content_s;
-  char *lang = NULL, *content;
 
+  data.lang[0] = '\0';
   if (!strncmp(ctx->buffer + start, "```", 3)) {
     ctx->i += 3;
     while ('\n' != ctx->buffer[ctx->i]) {
@@ -189,14 +189,13 @@ parse_code(struct CMarkContext *ctx)
     }
 
     if (ctx->i > start + 3) {
-      lang = malloc(ctx->i - (start + 3) + 1);
-      strncpy(lang, ctx->buffer + (start + 3), ctx->i - (start + 2));
-      lang[ctx->i - (start + 3)] = '\0';
+      strncpy(data.lang, ctx->buffer + (start + 3), ctx->i - (start + 2));
+      data.lang[ctx->i - (start + 3)] = '\0';
     }
 
-    content = malloc(256);
+    data.content = malloc(256);
     content_s = 256;
-    content[0] = '\0';
+    data.content[0] = '\0';
     content_l = 1;
 
     while (1) {
@@ -213,13 +212,13 @@ parse_code(struct CMarkContext *ctx)
 
       if (content_s <= content_l) {
         content_s += 256;
-        content = realloc(content, content_s);
+        data.content = realloc(data.content, content_s);
       }
 
-      strcat(content, ctx->buffer);
+      strcat(data.content, ctx->buffer);
     }
 
-    return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = lang, .code.content = content }, 0);
+    return create_node(CMARK_CODE, (union CMarkNodeData) { .code = data }, 0);
   } else {
     ctx->i += 1;
     content_s = ctx->i;
@@ -231,12 +230,12 @@ parse_code(struct CMarkContext *ctx)
       ctx->i++;
     }
 
-    content = malloc(ctx->i - content_s + 1);
-    strncpy(content, ctx->buffer + content_s, ctx->i - content_s);
-    content[ctx->i - content_s] = '\0';
+    data.content = malloc(ctx->i - content_s + 1);
+    strncpy(data.content, ctx->buffer + content_s, ctx->i - content_s);
+    data.content[ctx->i - content_s] = '\0';
 
     ctx->i++;
-    return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = NULL, .code.content = content }, 0);
+    return create_node(CMARK_CODE, (union CMarkNodeData) { .code = data }, 0);
   }
 }
 
