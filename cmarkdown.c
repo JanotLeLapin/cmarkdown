@@ -51,6 +51,9 @@ cmark_free_node(struct CMarkNode node)
     case CMARK_PLAIN:
       free(node.data.plain);
       break;
+    case CMARK_CODE:
+      free(node.data.code.lang);
+      free(node.data.code.content);
     default:
       break;
   }
@@ -176,7 +179,6 @@ parse_anchor(struct CMarkContext *ctx)
 struct CMarkNode
 parse_code(struct CMarkContext *ctx)
 {
-  struct CMarkNode node;
   size_t start = ctx->i, content_l, content_s;
   char *lang = NULL, *content;
 
@@ -208,7 +210,6 @@ parse_code(struct CMarkContext *ctx)
         ctx->i++;
       }
       content_l += ctx->i + 1;
-      printf("line: %ld\n", ctx->i + 1);
 
       if (content_s <= content_l) {
         content_s += 256;
@@ -217,7 +218,6 @@ parse_code(struct CMarkContext *ctx)
 
       strcat(content, ctx->buffer);
     }
-    printf("total: %ld\n", content_l);
 
     return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = lang, .code.content = content }, 0);
   } else {
@@ -233,7 +233,7 @@ parse_code(struct CMarkContext *ctx)
 
     content = malloc(ctx->i - content_s + 1);
     strncpy(content, ctx->buffer + content_s, ctx->i - content_s);
-    content[ctx->i] = '\0';
+    content[ctx->i - content_s] = '\0';
 
     ctx->i++;
     return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = NULL, .code.content = content }, 0);
