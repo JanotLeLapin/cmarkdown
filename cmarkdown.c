@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define create_empty_node() create_node(CMARK_NULL, (union CMarkNodeData) { .null = 0 }, 0);
+#define DATA_NULL ((union CMarkNodeData) { .null = 0 })
 
 struct CMarkNode parse_inline(struct CMarkContext *ctx);
 
@@ -99,7 +99,7 @@ parse_plain(struct CMarkContext *ctx)
 
   len = ctx->i - start;
   if (!len) {
-    return create_empty_node();
+    return create_node(CMARK_NULL, DATA_NULL, 0);
   }
   
   data.plain = malloc(len + 1);
@@ -130,7 +130,7 @@ parse_anchor(struct CMarkContext *ctx)
         break;
       case '\n':
         free(node.children);
-        return create_empty_node();
+        return create_node(CMARK_NULL, DATA_NULL, 0);
       default:
         continue;
     }
@@ -140,7 +140,7 @@ parse_anchor(struct CMarkContext *ctx)
   ctx->i++;
   if ('(' != ctx->buffer[ctx->i]) {
     free(node.children);
-    return create_empty_node();
+    return create_node(CMARK_NULL, DATA_NULL, 0);
   }
 
   href_start = ctx->i + 1;
@@ -151,7 +151,7 @@ parse_anchor(struct CMarkContext *ctx)
         break;
       case '\n':
         free(node.children);
-        return create_empty_node();
+        return create_node(CMARK_NULL, DATA_NULL, 0);
       default:
         continue;
     }
@@ -161,7 +161,7 @@ parse_anchor(struct CMarkContext *ctx)
   href_len = ctx->i - href_start;
   if (!href_len) {
     free(node.children);
-    return create_empty_node();
+    return create_node(CMARK_NULL, DATA_NULL, 0);
   }
 
   data.anchor.href = malloc(href_len + 1);
@@ -184,7 +184,7 @@ parse_inline(struct CMarkContext *ctx)
       while (' ' == ctx->buffer[ctx->i] || '\t' == ctx->buffer[ctx->i]) {
         ctx->i++;
       }
-      return create_node(CMARK_WHITESPACE, (union CMarkNodeData) { .null = 0 }, 0);
+      return create_node(CMARK_WHITESPACE, DATA_NULL, 0);
     default:
       return parse_plain(ctx);
   }
@@ -251,7 +251,7 @@ parse_line(struct CMarkContext *ctx)
 struct CMarkNode
 cmark_parse(struct CMarkContext *ctx)
 {
-  struct CMarkNode root = create_node(CMARK_ROOT, (union CMarkNodeData) { .null = 0 }, 8);
+  struct CMarkNode root = create_node(CMARK_ROOT, DATA_NULL, 8);
 
   while (1) {
     read_line(ctx);
