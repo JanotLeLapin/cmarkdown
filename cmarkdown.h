@@ -8,6 +8,7 @@ enum CMarkNodeType {
   CMARK_PARAGRAPH,
 
   CMARK_ANCHOR,
+  CMARK_CODE,
   CMARK_PLAIN,
 
   CMARK_WHITESPACE,
@@ -22,9 +23,15 @@ struct CMarkNodeAnchorData {
   char *href;
 };
 
+struct CMarkNodeCodeData {
+  char *lang;
+  char *content;
+};
+
 union CMarkNodeData {
   struct CMarkNodeHeaderData header;
   struct CMarkNodeAnchorData anchor;
+  struct CMarkNodeCodeData code;
   char *plain;
   char null;
 };

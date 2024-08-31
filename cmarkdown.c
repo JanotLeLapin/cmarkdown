@@ -174,11 +174,66 @@ parse_anchor(struct CMarkContext *ctx)
 }
 
 struct CMarkNode
+parse_code(struct CMarkContext *ctx)
+{
+  struct CMarkNode node;
+  size_t start = ctx->i, content_start;
+  char *lang = NULL, *content;
+
+  if (!strncmp(ctx->buffer + start, "```", 3)) {
+    ctx->i += 3;
+    while ('\n' != ctx->buffer[ctx->i]) {
+      ctx->i++;
+    }
+
+    if (ctx->i > start + 3) {
+      lang = malloc(ctx->i - (start + 3) + 1);
+      strncpy(lang, ctx->buffer + (start + 3), ctx->i - (start + 2));
+      lang[ctx->i - (start + 3)] = '\0';
+    }
+
+    content = malloc(256);
+    content[0] = '\0';
+
+    while (1) {
+      read_line(ctx);
+      if (!strncmp(ctx->buffer, "```", 3)) {
+        read_line(ctx);
+        break;
+      }
+
+      strcat(content, ctx->buffer);
+    }
+
+    return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = lang, .code.content = content }, 0);
+  } else {
+    ctx->i += 1;
+    content_start = ctx->i;
+    if ('`' == ctx->buffer[ctx->i]) {
+      return create_node(CMARK_CODE, DATA_NULL, 0);
+    }
+
+    while ('`' != ctx->buffer[ctx->i]) {
+      ctx->i++;
+    }
+
+    content = malloc(ctx->i - content_start + 1);
+    strncpy(content, ctx->buffer + content_start, ctx->i - content_start);
+    content[ctx->i] = '\0';
+
+    ctx->i++;
+    return create_node(CMARK_CODE, (union CMarkNodeData) { .code.lang = NULL, .code.content = content }, 0);
+  }
+}
+
+struct CMarkNode
 parse_inline(struct CMarkContext *ctx)
 {
   switch (ctx->buffer[ctx->i]) {
     case '[':
       return parse_anchor(ctx);
+    case '`':
+      return parse_code(ctx);
     case ' ':
     case '\t':
       while (' ' == ctx->buffer[ctx->i] || '\t' == ctx->buffer[ctx->i]) {
