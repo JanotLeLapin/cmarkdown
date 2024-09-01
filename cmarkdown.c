@@ -79,7 +79,8 @@ read_line(struct CMarkContext *ctx)
   ctx->i = 0;
 }
 
-char is_anchor(struct CMarkContext *ctx)
+char
+is_anchor(struct CMarkContext *ctx)
 {
   size_t i = ctx->i + 1;
   char c;
@@ -113,6 +114,24 @@ char is_anchor(struct CMarkContext *ctx)
   return 1;
 }
 
+char
+is_code(struct CMarkContext *ctx)
+{
+  size_t i = ctx->i + 1;
+
+  while (1) {
+    if ('`' == ctx->buffer[i])
+      break;
+
+    if ('\n' == ctx->buffer[i])
+      return 0;
+
+    i++;
+  }
+
+  return 1;
+}
+
 struct CMarkNode
 parse_plain(struct CMarkContext *ctx)
 {
@@ -136,6 +155,11 @@ parse_plain(struct CMarkContext *ctx)
 
         ctx->i++;
         continue;
+      case '`':
+        if (is_code(ctx))
+          break;
+
+        ctx->i++;
       default:
         ctx->i++;
         continue;
@@ -297,7 +321,10 @@ parse_inline(struct CMarkContext *ctx)
       else
         return parse_plain(ctx);
     case '`':
-      return parse_code(ctx);
+      if (is_code(ctx))
+        return parse_code(ctx);
+      else
+        return parse_plain(ctx);
     case ' ':
     case '\t':
       while (' ' == ctx->buffer[ctx->i] || '\t' == ctx->buffer[ctx->i]) {
