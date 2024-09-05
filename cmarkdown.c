@@ -160,6 +160,8 @@ parse_plain(struct CMarkContext *ctx)
           break;
 
         ctx->i++;
+      case '*':
+        break;
       default:
         ctx->i++;
         continue;
@@ -365,7 +367,11 @@ parse_paragraph(struct CMarkContext *ctx)
   while (1) {
     switch (ctx->buffer[ctx->i]) {
       case '\n':
-        break;
+        read_line(ctx);
+        if ('\n' == ctx->buffer[0] || feof(ctx->file)) {
+          break;
+        }
+        continue;
       default:
         add_child(&node, parse_inline(ctx));
         continue;
