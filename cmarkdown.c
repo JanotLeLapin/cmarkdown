@@ -356,6 +356,8 @@ parse_header(struct CMarkContext *ctx)
     add_child(&node, parse_inline(ctx));
   }
 
+  read_line(ctx);
+
   return node;
 }
 
