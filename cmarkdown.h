@@ -20,12 +20,14 @@ enum CMarkElemType {
   CMARK_HEADER,
 };
 
+struct CMarkText {
+  char *ptr;
+  typeof(sizeof(0)) length;
+};
+
 union CMarkElemData {
-  struct {
-    char *ptr;
-    typeof(sizeof(0)) length;
-  } plain;
-  char *anchor_end_href;
+  struct CMarkText plain;
+  struct CMarkText anchor_end_href;
   char emphasis_flags;
   struct {
     char lang[16];

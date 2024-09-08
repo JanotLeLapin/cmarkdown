@@ -10,6 +10,36 @@ read_line(struct CMarkParser *p)
   p->flags = 1;
 }
 
+char is_anchor(struct CMarkParser *p)
+{
+  size_t i = p->i;
+
+  if ('[' != p->buf[i]) {
+    return 0;
+  }
+
+  while (']' != p->buf[i]) {
+    i++;
+    if (p->buf[i] == '\n') {
+      return 0;
+    }
+  }
+
+  i++;
+  if ('(' != p->buf[i]) {
+    return 0;
+  }
+
+  while (')' != p->buf[i]) {
+    i++;
+    if (p->buf[i] == '\n') {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 struct CMarkParser
 cmark_new_parser(void *file)
 {
@@ -58,9 +88,45 @@ cmark_next(struct CMarkParser *p)
       case '\n':
         read_line(p);
         return (struct CMarkElem) { .type = CMARK_BREAK };
-      default:
-        while ('\n' != p->buf[p->i]) {
+      case '[':
+        p->flags |= 0x02;
+        p->i++;
+        return (struct CMarkElem) { .type = CMARK_ANCHOR_START };
+      case ']':
+        p->flags &= ~0x02;
+
+        while (')' != p->buf[p->i]) {
           p->i++;
+        }
+        p->i++;
+
+        return (struct CMarkElem) {
+          .type = CMARK_ANCHOR_END,
+          .data.anchor_end_href.ptr = p->buf + start + 2,
+          .data.anchor_end_href.length = p->i - start - 3,
+        };
+      default:
+        while (1) {
+          switch (p->buf[p->i]) {
+            case '\n':
+              break;
+            case '[':
+              if (is_anchor(p)) {
+                break;
+              }
+              p->i++;
+              continue;
+            case ']':
+              if ((p->flags & 0x02) == 0x02) {
+                break;
+              }
+              p->i++;
+              continue;
+            default:
+              p->i++;
+              continue;
+          }
+          break;
         }
 
         return (struct CMarkElem) {
