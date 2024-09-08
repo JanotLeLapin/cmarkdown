@@ -14,14 +14,23 @@ enum CMarkElemType {
   CMARK_EMPHASIS_END,
   CMARK_ANCHOR_START,
   CMARK_ANCHOR_END,
+  CMARK_CODE_START,
+  CMARK_CODE_END,
 
   CMARK_HEADER,
 };
 
 union CMarkElemData {
-  char *plain;
+  struct {
+    char *ptr;
+    typeof(sizeof(0)) length;
+  } plain;
   char *anchor_end_href;
   char emphasis_flags;
+  struct {
+    char lang[16];
+    char is_multi_line;
+  } code;
   unsigned char header_level;
 };
 

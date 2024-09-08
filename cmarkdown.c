@@ -1,8 +1,6 @@
 #include "cmarkdown.h"
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 void
 read_line(struct CMarkParser *p)
@@ -28,7 +26,6 @@ struct CMarkElem
 cmark_next(struct CMarkParser *p)
 {
   unsigned short start = p->i, end;
-  char *buffer;
 
   while (1) {
     if (feof(p->file)) {
@@ -66,15 +63,10 @@ cmark_next(struct CMarkParser *p)
           p->i++;
         }
 
-        buffer = malloc(p->i - start + 1);
-        strncpy(buffer, p->buf + start, p->i - start);
-        buffer[p->i - start] = '\0';
-
-        read_line(p);
-
         return (struct CMarkElem) {
           .type = CMARK_PLAIN,
-          .data.plain = buffer,
+          .data.plain.ptr = p->buf + start,
+          .data.plain.length = p->i - start,
         };
     }
   }
