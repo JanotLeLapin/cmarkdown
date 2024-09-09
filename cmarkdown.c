@@ -120,8 +120,12 @@ cmark_next(struct CMarkParser *p)
         read_line(p);
         return (struct CMarkElem) { .type = CMARK_BREAK };
       case '[':
-        p->flags |= 0x02;
+        if (!is_anchor(p)) {
+          p->i++;
+          continue;
+        }
         p->i++;
+        p->flags |= 0x02;
         return (struct CMarkElem) { .type = CMARK_ANCHOR_START };
       case ']':
         p->flags &= ~0x02;
@@ -137,6 +141,10 @@ cmark_next(struct CMarkParser *p)
           .data.anchor_end_href.length = p->i - start - 3,
         };
       case '`':
+        if (!is_code(p)) {
+          p->i++;
+          continue;
+        }
         p->i++;
         if ((p->flags & 0x04) == 0x04) {
           p->flags &= ~0x04;
