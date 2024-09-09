@@ -18,6 +18,7 @@ enum CMarkElemType {
   CMARK_CODE_END,
 
   CMARK_HEADER,
+  CMARK_LIST_ITEM,
 };
 
 struct CMarkText {
@@ -34,6 +35,7 @@ union CMarkElemData {
     char is_multi_line;
   } code;
   unsigned char header_level;
+  char list_item_symbol;
 };
 
 struct CMarkElem {

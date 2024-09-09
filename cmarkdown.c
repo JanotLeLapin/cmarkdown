@@ -98,6 +98,18 @@ cmark_next(struct CMarkParser *p)
             .type = CMARK_HEADER,
             .data.header_level = end - start,
           };
+        case '-':
+        case '*':
+          p->i++;
+          if (' ' != p->buf[p->i]) {
+            break;
+          }
+          p->i++;
+
+          return (struct CMarkElem) {
+            .type = CMARK_LIST_ITEM,
+            .data.list_item_symbol = p->buf[p->i - 2],
+          };
         default:
           break;
       }
