@@ -40,6 +40,25 @@ char is_anchor(struct CMarkParser *p)
   return 1;
 }
 
+char is_code(struct CMarkParser *p)
+{
+  size_t i = p->i;
+
+  if ('`' != p->buf[i]) {
+    return 0;
+  }
+  i++;
+
+  while ('`' != p->buf[i]) {
+    i++;
+    if (p->buf[i] == '\n') {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 struct CMarkParser
 cmark_new_parser(void *file)
 {
@@ -105,13 +124,26 @@ cmark_next(struct CMarkParser *p)
           .data.anchor_end_href.ptr = p->buf + start + 2,
           .data.anchor_end_href.length = p->i - start - 3,
         };
+      case '`':
+        p->i++;
+        if ((p->flags & 0x04) == 0x04) {
+          p->flags &= ~0x04;
+          return (struct CMarkElem) {
+            .type = CMARK_CODE_END,
+          };
+        } else {
+          p->flags |= 0x04;
+          return (struct CMarkElem) {
+            .type = CMARK_CODE_START,
+          };
+        }
       default:
         while (1) {
           switch (p->buf[p->i]) {
             case '\n':
               break;
             case '[':
-              if (is_anchor(p)) {
+              if ((p->flags & 0x04) != 0x04 && is_anchor(p)) {
                 break;
               }
               p->i++;
@@ -122,6 +154,12 @@ cmark_next(struct CMarkParser *p)
               }
               p->i++;
               continue;
+            case '`':
+              if ((p->flags & 0x04) == 0x04 || is_code(p)) {
+                break;
+              }
+              p->i++;
+              break;
             default:
               p->i++;
               continue;
