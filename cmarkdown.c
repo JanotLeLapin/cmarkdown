@@ -7,7 +7,7 @@ read_line(struct CMarkParser *p)
 {
   fgets(p->buf, sizeof(p->buf), p->file);
   p->i = 0;
-  p->flags = 1;
+  p->flags |= 1;
 }
 
 char is_anchor(struct CMarkParser *p)
@@ -49,6 +49,10 @@ char is_code(struct CMarkParser *p)
   }
   i++;
 
+  if ('`' == p->buf[i] && '`' == p->buf[i + 1]) {
+    return 2;
+  }
+
   while ('`' != p->buf[i]) {
     i++;
     if (p->buf[i] == '\n') {
@@ -79,6 +83,31 @@ cmark_next(struct CMarkParser *p)
   while (1) {
     if (feof(p->file)) {
       return (struct CMarkElem) { .type = CMARK_EOF };
+    }
+
+    if (0x08 == (p->flags & 0x08)) {
+      if ('\n' == p->buf[p->i]) {
+        read_line(p);
+        return (struct CMarkElem) { .type = CMARK_BREAK };
+      }
+
+      if ('`' == p->buf[p->i] && '`' == p->buf[p->i + 1] && '`' == p->buf[p->i + 2]) {
+        p->i += 3;
+        p->flags &= ~0x08;
+        return (struct CMarkElem) { .type = CMARK_CODE_END };
+      }
+
+      while ('\n' != p->buf[p->i]) {
+        p->i++;
+      }
+
+      return (struct CMarkElem) {
+        .type = CMARK_PLAIN,
+        .data = (struct CMarkText) {
+          .ptr = p->buf,
+          .length = p->i,
+        },
+      };
     }
 
     if (0x01 == (p->flags & 0x01)) {
@@ -141,21 +170,46 @@ cmark_next(struct CMarkParser *p)
           .data.anchor_end_href.length = p->i - start - 3,
         };
       case '`':
-        if (!is_code(p)) {
-          p->i++;
-          continue;
-        }
-        p->i++;
         if ((p->flags & 0x04) == 0x04) {
+          p->i++;
           p->flags &= ~0x04;
           return (struct CMarkElem) {
             .type = CMARK_CODE_END,
           };
-        } else {
-          p->flags |= 0x04;
-          return (struct CMarkElem) {
-            .type = CMARK_CODE_START,
-          };
+        }
+
+        switch (is_code(p)) {
+          case 0:
+            p->i++;
+            continue;
+          case 1:
+            p->i++;
+            p->flags |= 0x04;
+            return (struct CMarkElem) {
+              .type = CMARK_CODE_START,
+            };
+          case 2:
+            p->i += 3;
+            p->flags |= 0x08;
+
+            size_t start = p->i;
+            union CMarkElemData data;
+
+            while (1) {
+              if ('\n' == p->buf[p->i]) {
+                break;
+              }
+
+              data.code.lang[p->i - start] = p->buf[p->i];
+              p->i++;
+            }
+            data.code.lang[p->i - start] = '\0';
+            data.code.is_multi_line = 1;
+
+            return (struct CMarkElem) {
+              .type = CMARK_CODE_START,
+              .data = data,
+            };
         }
       default:
         while (1) {
@@ -175,7 +229,7 @@ cmark_next(struct CMarkParser *p)
               p->i++;
               continue;
             case '`':
-              if ((p->flags & 0x04) == 0x04 || is_code(p)) {
+              if ((p->flags & (0x04 | 0x08)) || is_code(p)) {
                 break;
               }
               p->i++;
