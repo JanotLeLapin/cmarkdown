@@ -157,6 +157,11 @@ cmark_next(struct CMarkParser *p)
         p->flags |= 0x02;
         return (struct CMarkElem) { .type = CMARK_ANCHOR_START };
       case ']':
+        if ((p->flags & 0x02) != 0x02) {
+          p->i++;
+          continue;
+        }
+
         p->flags &= ~0x02;
 
         while (')' != p->buf[p->i]) {
