@@ -3,6 +3,7 @@ struct CMarkParser {
   char buf[256];
   unsigned short i;
   char flags;
+  char blockquote_depth;
 };
 
 enum CMarkElemType {
@@ -19,6 +20,8 @@ enum CMarkElemType {
 
   CMARK_HEADER,
   CMARK_LIST_ITEM,
+  CMARK_BLOCKQUOTE_START,
+  CMARK_BLOCKQUOTE_END,
 };
 
 struct CMarkText {

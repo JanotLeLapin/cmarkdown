@@ -1,5 +1,6 @@
 #include "cmarkdown.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 
 void
@@ -69,6 +70,7 @@ cmark_new_parser(void *file)
   struct CMarkParser p = {
     .file = file,
     .flags = 0,
+    .blockquote_depth = 0,
   };
 
   read_line(&p);
@@ -112,6 +114,12 @@ cmark_next(struct CMarkParser *p)
 
     if (0x01 == (p->flags & 0x01)) {
       p->flags &= ~1;
+
+      if (p->blockquote_depth && '>' != p->buf[p->i]) {
+        p->blockquote_depth = 0;
+        return (struct CMarkElem) { .type = CMARK_BLOCKQUOTE_END };
+      }
+
       switch (p->buf[p->i]) {
         case '#':
           while ('#' == p->buf[p->i]) {
@@ -127,6 +135,22 @@ cmark_next(struct CMarkParser *p)
             .type = CMARK_HEADER,
             .data.header_level = end - start,
           };
+        case '>':
+          while ('>' == p->buf[p->i]) {
+            p->i++;
+          }
+          end = p->i;
+
+          char diff = p->blockquote_depth - (end - start);
+
+          if (1 == abs(diff)) {
+            p->blockquote_depth = end - start;
+            p->i++;
+            return (struct CMarkElem) { .type = diff > 0 ? CMARK_BLOCKQUOTE_END : CMARK_BLOCKQUOTE_START };
+          }
+
+          start = p->i + 1;
+          break;
         case '-':
         case '*':
           p->i++;
