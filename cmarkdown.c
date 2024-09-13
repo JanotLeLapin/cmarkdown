@@ -3,12 +3,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+enum Flag {
+  FLAG_NEWLINE = 1 << 0,
+  FLAG_ANCHOR = 1 << 1,
+  FLAG_CODE_INLINE = 1 << 2,
+  FLAG_CODE_MULTILINE = 1 << 3,
+  FLAG_LIST = 1 << 4,
+};
+
 void
 read_line(struct CMarkParser *p)
 {
   fgets(p->buf, sizeof(p->buf), p->file);
   p->i = 0;
-  p->flags |= 1;
+  p->flags |= FLAG_NEWLINE;
 }
 
 char is_anchor(struct CMarkParser *p)
@@ -87,7 +95,7 @@ cmark_next(struct CMarkParser *p)
       return (struct CMarkElem) { .type = CMARK_EOF };
     }
 
-    if (0x08 == (p->flags & 0x08)) {
+    if (p->flags & FLAG_CODE_MULTILINE) {
       if ('\n' == p->buf[p->i]) {
         read_line(p);
         return (struct CMarkElem) { .type = CMARK_BREAK };
@@ -95,7 +103,7 @@ cmark_next(struct CMarkParser *p)
 
       if ('`' == p->buf[p->i] && '`' == p->buf[p->i + 1] && '`' == p->buf[p->i + 2]) {
         p->i += 3;
-        p->flags &= ~0x08;
+        p->flags &= ~FLAG_CODE_MULTILINE;
         return (struct CMarkElem) { .type = CMARK_CODE_END };
       }
 
@@ -112,8 +120,8 @@ cmark_next(struct CMarkParser *p)
       };
     }
 
-    if (0x01 == (p->flags & 0x01)) {
-      p->flags &= ~1;
+    if (p->flags & FLAG_NEWLINE) {
+      p->flags &= ~FLAG_NEWLINE;
 
       if (p->blockquote_depth && '>' != p->buf[p->i]) {
         p->blockquote_depth = 0;
@@ -121,16 +129,16 @@ cmark_next(struct CMarkParser *p)
       }
 
       if ('*' == p->buf[p->i] || '-' == p->buf[p->i]) {
-        if (p->flags & 0x10) {
+        if (p->flags & FLAG_LIST) {
           p->i += 2;
           return (struct CMarkElem) { .type = CMARK_LIST_ITEM };
         } else {
-          p->flags |= 0x10;
-          p->flags |= 0x01;
+          p->flags |= FLAG_LIST;
+          p->flags |= FLAG_NEWLINE;
           return (struct CMarkElem) { .type = CMARK_LIST_START };
         }
-      } else if (p->flags & 0x10) {
-        p->flags &= ~0x10;
+      } else if (p->flags & FLAG_LIST) {
+        p->flags &= ~FLAG_LIST;
         return (struct CMarkElem) { .type = CMARK_LIST_END };
       }
 
@@ -180,15 +188,15 @@ cmark_next(struct CMarkParser *p)
           continue;
         }
         p->i++;
-        p->flags |= 0x02;
+        p->flags |= FLAG_ANCHOR;
         return (struct CMarkElem) { .type = CMARK_ANCHOR_START };
       case ']':
-        if ((p->flags & 0x02) != 0x02) {
+        if (!(p->flags & FLAG_ANCHOR)) {
           p->i++;
           continue;
         }
 
-        p->flags &= ~0x02;
+        p->flags &= ~FLAG_ANCHOR;
 
         while (')' != p->buf[p->i]) {
           p->i++;
@@ -201,9 +209,9 @@ cmark_next(struct CMarkParser *p)
           .data.anchor_end_href.length = p->i - start - 3,
         };
       case '`':
-        if ((p->flags & 0x04) == 0x04) {
+        if (p->flags & FLAG_CODE_INLINE) {
           p->i++;
-          p->flags &= ~0x04;
+          p->flags &= ~FLAG_CODE_INLINE;
           return (struct CMarkElem) {
             .type = CMARK_CODE_END,
           };
@@ -215,13 +223,13 @@ cmark_next(struct CMarkParser *p)
             continue;
           case 1:
             p->i++;
-            p->flags |= 0x04;
+            p->flags |= FLAG_CODE_INLINE;
             return (struct CMarkElem) {
               .type = CMARK_CODE_START,
             };
           case 2:
             p->i += 3;
-            p->flags |= 0x08;
+            p->flags |= FLAG_CODE_MULTILINE;
 
             size_t start = p->i;
             union CMarkElemData data;
@@ -248,19 +256,19 @@ cmark_next(struct CMarkParser *p)
             case '\n':
               break;
             case '[':
-              if ((p->flags & 0x04) != 0x04 && is_anchor(p)) {
+              if (!(p->flags & FLAG_CODE_INLINE) && is_anchor(p)) {
                 break;
               }
               p->i++;
               continue;
             case ']':
-              if ((p->flags & 0x02) == 0x02) {
+              if (p->flags & FLAG_ANCHOR) {
                 break;
               }
               p->i++;
               continue;
             case '`':
-              if ((p->flags & (0x04 | 0x08)) || is_code(p)) {
+              if ((p->flags & (FLAG_CODE_INLINE | FLAG_CODE_MULTILINE)) || is_code(p)) {
                 break;
               }
               p->i++;
