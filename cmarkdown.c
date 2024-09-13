@@ -19,6 +19,17 @@ read_line(struct CMarkParser *p)
   p->flags |= FLAG_NEWLINE;
 }
 
+char is_emphasis(struct CMarkParser *p)
+{
+  size_t i = p->i;
+
+  while ('*' == p->buf[i]) {
+    i++;
+  }
+
+  return ' ' != p->buf[(i - p->i == p->emphasis_type[p->emphasis_count]) ? p->i - 2 : i + 1];
+}
+
 char is_anchor(struct CMarkParser *p)
 {
   size_t i = p->i;
@@ -277,8 +288,12 @@ cmark_next(struct CMarkParser *p)
         while (1) {
           switch (p->buf[p->i]) {
             case '\n':
-            case '*':
               break;
+            case '*':
+              if (is_emphasis(p)) {
+                break;
+              }
+              continue;
             case '[':
               if (!(p->flags & FLAG_CODE_INLINE) && is_anchor(p)) {
                 break;
