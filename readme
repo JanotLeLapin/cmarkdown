@@ -1,0 +1,7 @@
+cmarkdown - a Markdown parser written in C
+
+* stream-based: allows single-pass processing
+* no explicit mallocs
+* 0 dependencies
+
+you may see a working example of a program using this parser here: github.com/JanotLeLapin/uni
