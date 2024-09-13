@@ -120,6 +120,20 @@ cmark_next(struct CMarkParser *p)
         return (struct CMarkElem) { .type = CMARK_BLOCKQUOTE_END };
       }
 
+      if ('*' == p->buf[p->i] || '-' == p->buf[p->i]) {
+        if (p->flags & 0x10) {
+          p->i += 2;
+          return (struct CMarkElem) { .type = CMARK_LIST_ITEM };
+        } else {
+          p->flags |= 0x10;
+          p->flags |= 0x01;
+          return (struct CMarkElem) { .type = CMARK_LIST_START };
+        }
+      } else if (p->flags & 0x10) {
+        p->flags &= ~0x10;
+        return (struct CMarkElem) { .type = CMARK_LIST_END };
+      }
+
       switch (p->buf[p->i]) {
         case '#':
           while ('#' == p->buf[p->i]) {
@@ -151,18 +165,6 @@ cmark_next(struct CMarkParser *p)
 
           start = p->i + 1;
           break;
-        case '-':
-        case '*':
-          p->i++;
-          if (' ' != p->buf[p->i]) {
-            break;
-          }
-          p->i++;
-
-          return (struct CMarkElem) {
-            .type = CMARK_LIST_ITEM,
-            .data.list_item_symbol = p->buf[p->i - 2],
-          };
         default:
           break;
       }
