@@ -4,6 +4,8 @@ struct CMarkParser {
   unsigned short i;
   char flags;
   char blockquote_depth;
+  unsigned short emphasis_count;
+  char emphasis_type[8];
 };
 
 enum CMarkElemType {

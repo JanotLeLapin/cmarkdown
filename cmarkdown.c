@@ -128,7 +128,7 @@ cmark_next(struct CMarkParser *p)
         return (struct CMarkElem) { .type = CMARK_BLOCKQUOTE_END };
       }
 
-      if ('*' == p->buf[p->i] || '-' == p->buf[p->i]) {
+      if (('*' == p->buf[p->i] || '-' == p->buf[p->i]) && ' ' == p->buf[p->i + 1]) {
         if (p->flags & FLAG_LIST) {
           p->i += 2;
           return (struct CMarkElem) { .type = CMARK_LIST_ITEM };
@@ -182,6 +182,29 @@ cmark_next(struct CMarkParser *p)
       case '\n':
         read_line(p);
         return (struct CMarkElem) { .type = CMARK_BREAK };
+      case '*':
+        while ('*' == p->buf[p->i]) {
+          p->i++;
+        }
+
+        if (p->i - start == p->emphasis_type[p->emphasis_count]) {
+          if (' ' != p->buf[p->i - 2]) {
+            p->emphasis_count--;
+            return (struct CMarkElem) {
+              .type = CMARK_EMPHASIS_END,
+              .data.emphasis_flags = p->i - start,
+            };
+          }
+        } else if (' ' != p->buf[start + 1]) {
+          p->emphasis_count++;
+          p->emphasis_type[p->emphasis_count] = p->i - start;
+          return (struct CMarkElem) {
+            .type = CMARK_EMPHASIS_START,
+            .data.emphasis_flags = p->i - start,
+          };
+        }
+
+        continue;
       case '[':
         if (!is_anchor(p)) {
           p->i++;
@@ -254,6 +277,7 @@ cmark_next(struct CMarkParser *p)
         while (1) {
           switch (p->buf[p->i]) {
             case '\n':
+            case '*':
               break;
             case '[':
               if (!(p->flags & FLAG_CODE_INLINE) && is_anchor(p)) {
