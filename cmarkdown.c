@@ -9,6 +9,7 @@ enum Flag {
   FLAG_CODE_INLINE = 1 << 2,
   FLAG_CODE_MULTILINE = 1 << 3,
   FLAG_LIST = 1 << 4,
+  FLAG_ASIDE = 1 << 5,
 };
 
 void
@@ -170,6 +171,52 @@ cmark_next(struct CMarkParser *p)
           return (struct CMarkElem) {
             .type = CMARK_HEADER,
             .data.header_level = end - start,
+          };
+        case ':':
+          while (':' == p->buf[p->i]) {
+            p->i++;
+          }
+
+          if (3 != p->i - start) {
+            p->i = start;
+            break;
+          }
+
+          if (p->flags & FLAG_ASIDE) {
+            p->flags &= ~FLAG_ASIDE;
+            return (struct CMarkElem) { .type = CMARK_ASIDE_END };
+          }
+
+          size_t type_start = p->i, type_end, title_start;
+
+          while ('\n' != p->buf[p->i] && '[' != p->buf[p->i]) {
+            p->i++;
+          }
+          type_end = p->i;
+
+          if ('[' != p->buf[p->i]) {
+            p->flags |= FLAG_ASIDE;
+            return (struct CMarkElem) {
+              .type = CMARK_ASIDE_START,
+              .data.aside.type = (struct CMarkText) { .ptr = p->buf + type_start, .length = type_end - type_start },
+            };
+          };
+
+          title_start = p->i + 1;
+          while ('\n' != p->buf[p->i] && ']' != p->buf[p->i]) {
+            p->i++;
+          }
+
+          if ('\n' == p->buf[p->i]) {
+            p->i = start;
+            break;
+          }
+
+          p->flags |= FLAG_ASIDE;
+          return (struct CMarkElem) {
+            .type = CMARK_ASIDE_START,
+            .data.aside.type = (struct CMarkText) { .ptr = p->buf + type_start, .length = type_end - type_start },
+            .data.aside.title = (struct CMarkText) { .ptr = p->buf + title_start, .length = p->i - title_start },
           };
         case '>':
           while ('>' == p->buf[p->i]) {
