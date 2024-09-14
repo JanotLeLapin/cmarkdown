@@ -19,7 +19,8 @@ read_line(struct CMarkParser *p)
   p->flags |= FLAG_NEWLINE;
 }
 
-char is_emphasis(struct CMarkParser *p)
+char
+is_emphasis(struct CMarkParser *p)
 {
   size_t i = p->i;
 
@@ -30,7 +31,8 @@ char is_emphasis(struct CMarkParser *p)
   return ' ' != p->buf[(i - p->i == p->emphasis_type[p->emphasis_count]) ? p->i - 2 : i + 1];
 }
 
-char is_anchor(struct CMarkParser *p)
+char
+is_anchor(struct CMarkParser *p)
 {
   size_t i = p->i;
 
@@ -60,7 +62,8 @@ char is_anchor(struct CMarkParser *p)
   return 1;
 }
 
-char is_code(struct CMarkParser *p)
+char
+is_code(struct CMarkParser *p)
 {
   size_t i = p->i;
 
