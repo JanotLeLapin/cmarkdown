@@ -1,7 +1,43 @@
 #include "cmarkdown.h"
 
+static inline void
+skip_whitespace(cmark_ctx_t *ctx)
+{
+  while (1) {
+    switch (ctx->src[ctx->i]) {
+    case ' ':
+    case '\n':
+    case '\t':
+      break;
+    default:
+      return;
+    }
+  }
+}
+
+static inline cmark_elem_heading_data_t
+parse_heading(cmark_ctx_t *ctx)
+{
+  size_t start = ctx->i;
+
+  while ('#' == ctx->src[ctx->i]) {
+    ctx->i++;
+  }
+
+  return (int) (ctx->i - start);
+}
+
 cmark_elem_t
 cmark_next(cmark_ctx_t *ctx)
 {
+  cmark_elem_t e;
+
+  switch (ctx->src[ctx->i]) {
+  case '#':
+    e.type = CMARK_ELEM_HEADING;
+    e.heading = parse_heading(ctx);
+    return e;
+  }
+
   return (cmark_elem_t) { .type = CMARK_ELEM_EOF };
 }
