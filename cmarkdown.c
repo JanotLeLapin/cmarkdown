@@ -8,6 +8,7 @@ skip_whitespace(cmark_ctx_t *ctx)
     case ' ':
     case '\n':
     case '\t':
+      ctx->i++;
       break;
     default:
       return;
