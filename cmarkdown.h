@@ -19,6 +19,7 @@ typedef int cmark_elem_heading_data_t;
 
 typedef struct {
   enum {
+    CMARK_ELEM_BREAK,
     CMARK_ELEM_PLAIN,
     CMARK_ELEM_HEADING,
 

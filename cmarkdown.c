@@ -34,6 +34,19 @@ cmark_next(cmark_ctx_t *ctx)
   cmark_elem_t e;
 
   switch (ctx->src[ctx->i]) {
+  case ' ':
+  case '\t':
+    skip_whitespace(ctx);
+    break;
+  case '\n':
+    ctx->i++;
+    e.type = CMARK_ELEM_BREAK;
+    return e;
+  default:
+    break;
+  }
+
+  switch (ctx->src[ctx->i]) {
   case '#':
     e.type = CMARK_ELEM_HEADING;
     e.heading = parse_heading(ctx);
