@@ -28,6 +28,23 @@ parse_heading(cmark_ctx_t *ctx)
   return (int) (ctx->i - start);
 }
 
+static inline cmark_elem_plain_data_t
+parse_plain(cmark_ctx_t *ctx)
+{
+  cmark_str_t str = { .p = ctx->src + ctx->i };
+
+  while (1) {
+    switch (ctx->src[ctx->i]) {
+    case '\n':
+      str.len = ctx->src + ctx->i - str.p;
+      return str;
+    default:
+      ctx->i++;
+      break;
+    }
+  }
+}
+
 cmark_elem_t
 cmark_next(cmark_ctx_t *ctx)
 {
@@ -50,6 +67,10 @@ cmark_next(cmark_ctx_t *ctx)
   case '#':
     e.type = CMARK_ELEM_HEADING;
     e.heading = parse_heading(ctx);
+    return e;
+  default:
+    e.type = CMARK_ELEM_PLAIN;
+    e.plain = parse_plain(ctx);
     return e;
   }
 
