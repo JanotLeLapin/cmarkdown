@@ -50,6 +50,11 @@ cmark_next(cmark_ctx_t *ctx)
 {
   cmark_elem_t e;
 
+  if (ctx->i >= ctx->len) {
+    e.type = CMARK_ELEM_EOF;
+    return e;
+  }
+
   switch (ctx->src[ctx->i]) {
   case ' ':
   case '\t':
