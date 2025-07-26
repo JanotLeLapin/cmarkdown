@@ -7,6 +7,7 @@ typedef struct {
   const char *src;
   size_t len;
   size_t i;
+  unsigned int flags;
 } cmark_ctx_t;
 
 typedef struct {
@@ -16,18 +17,22 @@ typedef struct {
 
 typedef cmark_str_t cmark_elem_plain_data_t;
 typedef int cmark_elem_heading_data_t;
+typedef cmark_str_t cmark_elem_anchor_link_data_t;
 
 typedef struct {
   enum {
-    CMARK_ELEM_BREAK,
-    CMARK_ELEM_PLAIN,
     CMARK_ELEM_HEADING,
 
+    CMARK_ELEM_PLAIN,
+    CMARK_ELEM_ANCHOR_TEXT,
+    CMARK_ELEM_ANCHOR_LINK,
+    CMARK_ELEM_BREAK,
     CMARK_ELEM_EOF,
   } type;
   union {
     cmark_elem_plain_data_t plain;
     cmark_elem_heading_data_t heading;
+    cmark_elem_anchor_link_data_t anchor_link;
   };
 } cmark_elem_t;
 
