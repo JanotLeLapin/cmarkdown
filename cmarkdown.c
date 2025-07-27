@@ -121,6 +121,7 @@ is_code_multiline(const cmark_ctx_t *ctx)
     if ('`' == ctx->src[i] && !strncmp("```", ctx->src + i, 3)) {
       return 1;
     }
+    i++;
   }
 
   return 0;
@@ -166,13 +167,13 @@ parse_plain(cmark_ctx_t *ctx)
         break;
       }
     case '`':
-      if (is_code_inline(ctx)) {
-        ctx->flags |= FLAG_CODE_INLINE;
+      if (is_code_multiline(ctx)) {
+        ctx->flags |= FLAG_CODE_MULTILINE;
         str.len = ctx->src + ctx->i - str.p;
         return str;
       }
-      if (is_code_multiline(ctx)) {
-        ctx->flags |= FLAG_CODE_MULTILINE;
+      if (is_code_inline(ctx)) {
+        ctx->flags |= FLAG_CODE_INLINE;
         str.len = ctx->src + ctx->i - str.p;
         return str;
       }
@@ -209,6 +210,33 @@ parse_code_inline(cmark_ctx_t *ctx)
 
   str.len = ctx->src + ctx->i++ - str.p;
   return str;
+}
+
+static inline cmark_elem_code_multiline_data_t
+parse_code_multilne(cmark_ctx_t *ctx)
+{
+  cmark_elem_code_multiline_data_t data;
+
+  ctx->i += 3;
+  if ('\n' != ctx->src[ctx->i]) {
+    data.lang.p = ctx->src + ctx->i;
+    while ('\n' != ctx->src[ctx->i]) {
+      ctx->i++;
+    }
+    data.lang.len = ctx->src + ctx->i - data.lang.p;
+  } else {
+    data.lang.p = 0;
+    data.lang.len = 0;
+  }
+
+  data.content.p = ctx->src + ++ctx->i;
+  while ('`' != ctx->src[ctx->i] || strncmp("```", ctx->src + ctx->i, 3)) {
+    ctx->i++;
+  }
+
+  data.content.len = ctx->src + ctx->i - data.content.p;
+  ctx->i += 3;
+  return data;
 }
 
 static inline char
@@ -306,7 +334,11 @@ cmark_next(cmark_ctx_t *ctx)
     }
     break;
   case '`':
-    if (HAS_FLAG(ctx, FLAG_CODE_INLINE) || is_code_inline(ctx)) {
+    if (HAS_FLAG(ctx, FLAG_CODE_MULTILINE) || is_code_multiline(ctx)) {
+      ctx->flags &= ~FLAG_CODE_MULTILINE;
+      e.type = CMARK_ELEM_CODE_MULTILINE;
+      e.code_multiline = parse_code_multilne(ctx);
+    } else if (HAS_FLAG(ctx, FLAG_CODE_INLINE) || is_code_inline(ctx)) {
       ctx->flags &= ~FLAG_CODE_INLINE;
       e.type = CMARK_ELEM_CODE_INLINE;
       e.code_inline = parse_code_inline(ctx);
