@@ -8,12 +8,11 @@
 
 typedef enum {
   FLAG_BEGIN_LINE = 1 << 0,
-  FLAG_ANCHOR_TEXT = 1 << 1,
-  FLAG_ANCHOR_LINK = 1 << 2,
-  FLAG_LIST_ASTERISK = 1 << 3,
-  FLAG_LIST_DASH = 1 << 4,
-  FLAG_CODE_INLINE = 1 << 5,
-  FLAG_CODE_MULTILINE = 1 << 6,
+  FLAG_ANCHOR = 1 << 1,
+  FLAG_LIST_ASTERISK = 1 << 2,
+  FLAG_LIST_DASH = 1 << 3,
+  FLAG_CODE_INLINE = 1 << 4,
+  FLAG_CODE_MULTILINE = 1 << 5,
 } flags_t;
 
 static inline void
@@ -150,8 +149,8 @@ parse_plain(cmark_ctx_t *ctx)
       str.len = ctx->src + ctx->i - str.p;
       return str;
     case '[':
-      if (!HAS_FLAG(ctx, FLAG_ANCHOR_TEXT) && is_anchor(ctx)) {
-        ctx->flags |= FLAG_ANCHOR_TEXT;
+      if (!HAS_FLAG(ctx, FLAG_ANCHOR) && is_anchor(ctx)) {
+        ctx->flags |= FLAG_ANCHOR;
         str.len = ctx->src + ctx->i - str.p;
         return str;
       } else {
@@ -159,9 +158,8 @@ parse_plain(cmark_ctx_t *ctx)
         break;
       }
     case ']':
-      if (HAS_FLAG(ctx, FLAG_ANCHOR_TEXT)) {
-        ctx->flags = (ctx->flags & ~FLAG_ANCHOR_TEXT) | FLAG_ANCHOR_LINK;
-        str.len = ctx->src + ctx->i++ - str.p;
+      if (HAS_FLAG(ctx, FLAG_ANCHOR)) {
+        str.len = ctx->src + ctx->i - str.p;
         return str;
       } else {
         ctx->i++;
@@ -288,7 +286,7 @@ cmark_next(cmark_ctx_t *ctx)
 
   switch (ctx->src[ctx->i]) {
   case '[':
-    if (HAS_FLAG(ctx, FLAG_ANCHOR_TEXT) || is_anchor(ctx)) {
+    if (HAS_FLAG(ctx, FLAG_ANCHOR) || is_anchor(ctx)) {
       ctx->i++;
       e.type = CMARK_ELEM_ANCHOR_TEXT;
     } else {
@@ -296,9 +294,10 @@ cmark_next(cmark_ctx_t *ctx)
       e.plain = parse_plain(ctx);
     }
     break;
-  case '(':
-    if (HAS_FLAG(ctx, FLAG_ANCHOR_LINK)) {
-      ctx->flags &= ~FLAG_ANCHOR_LINK;
+  case ']':
+    if (HAS_FLAG(ctx, FLAG_ANCHOR)) {
+      ctx->i++;
+      ctx->flags &= ~FLAG_ANCHOR;
       e.type = CMARK_ELEM_ANCHOR_LINK;
       e.anchor_link = parse_anchor_link(ctx);
     } else {
