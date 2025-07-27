@@ -145,6 +145,18 @@ parse_anchor_link(cmark_ctx_t *ctx)
   return str;
 }
 
+static inline char
+parse_break(cmark_ctx_t *ctx)
+{
+  size_t start = ctx->i;
+
+  while ('\n' == ctx->src[ctx->i] && ctx->i < ctx->len) {
+    ctx->i++;
+  }
+
+  return ctx->i - start > 1;
+}
+
 cmark_elem_t
 cmark_next(cmark_ctx_t *ctx)
 {
@@ -161,10 +173,12 @@ cmark_next(cmark_ctx_t *ctx)
     skip_whitespace(ctx);
     break;
   case '\n':
-    ctx->i++;
     ctx->flags |= FLAG_BEGIN_LINE;
-    e.type = CMARK_ELEM_BREAK;
-    return e;
+    if (parse_break(ctx)) {
+      e.type = CMARK_ELEM_BREAK;
+      return e;
+    }
+    break;
   default:
     break;
   }
