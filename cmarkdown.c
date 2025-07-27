@@ -1,5 +1,7 @@
 #include "cmarkdown.h"
 
+#include <string.h>
+
 #define HAS_FLAG(ctx, flag) ((ctx->flags & flag) == flag)
 
 #define MASK_FLAG_LIST (FLAG_LIST_ASTERISK | FLAG_LIST_DASH)
@@ -10,6 +12,8 @@ typedef enum {
   FLAG_ANCHOR_LINK = 1 << 2,
   FLAG_LIST_ASTERISK = 1 << 3,
   FLAG_LIST_DASH = 1 << 4,
+  FLAG_CODE_INLINE = 1 << 5,
+  FLAG_CODE_MULTILINE = 1 << 6,
 } flags_t;
 
 static inline void
@@ -85,6 +89,44 @@ is_anchor(const cmark_ctx_t *ctx)
   return 1;
 }
 
+static inline char
+is_code_inline(const cmark_ctx_t *ctx)
+{
+  size_t i = ctx->i;
+
+  if ('`' != ctx->src[i++]) {
+    return 0;
+  }
+
+  while ('`' != ctx->src[i]) {
+    if (i >= ctx->len) {
+      return 0;
+    }
+    i++;
+  }
+
+  return 1;
+}
+
+static inline char
+is_code_multiline(const cmark_ctx_t *ctx)
+{
+  size_t i = ctx->i;
+
+  if (strncmp("```", ctx->src + i, 3)) {
+    return 0;
+  }
+
+  i += 3;
+  while (i <= ctx->len - 3) {
+    if ('`' == ctx->src[i] && !strncmp("```", ctx->src + i, 3)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 static inline cmark_elem_heading_data_t
 parse_heading(cmark_ctx_t *ctx)
 {
@@ -125,6 +167,19 @@ parse_plain(cmark_ctx_t *ctx)
         ctx->i++;
         break;
       }
+    case '`':
+      if (is_code_inline(ctx)) {
+        ctx->flags |= FLAG_CODE_INLINE;
+        str.len = ctx->src + ctx->i - str.p;
+        return str;
+      }
+      if (is_code_multiline(ctx)) {
+        ctx->flags |= FLAG_CODE_MULTILINE;
+        str.len = ctx->src + ctx->i - str.p;
+        return str;
+      }
+      ctx->i++;
+      break;
     default:
       ctx->i++;
       break;
@@ -138,6 +193,19 @@ parse_anchor_link(cmark_ctx_t *ctx)
   cmark_str_t str = { .p = ctx->src + ++ctx->i };
 
   while (')' != ctx->src[ctx->i]) {
+    ctx->i++;
+  }
+
+  str.len = ctx->src + ctx->i++ - str.p;
+  return str;
+}
+
+static inline cmark_elem_code_inline_data_t
+parse_code_inline(cmark_ctx_t *ctx)
+{
+  cmark_str_t str = { .p = ctx->src + ++ctx->i };
+
+  while ('`' != ctx->src[ctx->i]) {
     ctx->i++;
   }
 
@@ -233,6 +301,16 @@ cmark_next(cmark_ctx_t *ctx)
       ctx->flags &= ~FLAG_ANCHOR_LINK;
       e.type = CMARK_ELEM_ANCHOR_LINK;
       e.anchor_link = parse_anchor_link(ctx);
+    } else {
+      e.type = CMARK_ELEM_PLAIN;
+      e.plain = parse_plain(ctx);
+    }
+    break;
+  case '`':
+    if (HAS_FLAG(ctx, FLAG_CODE_INLINE) || is_code_inline(ctx)) {
+      ctx->flags &= ~FLAG_CODE_INLINE;
+      e.type = CMARK_ELEM_CODE_INLINE;
+      e.code_inline = parse_code_inline(ctx);
     } else {
       e.type = CMARK_ELEM_PLAIN;
       e.plain = parse_plain(ctx);
