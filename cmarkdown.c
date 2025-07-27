@@ -2,10 +2,14 @@
 
 #define HAS_FLAG(ctx, flag) ((ctx->flags & flag) == flag)
 
+#define MASK_FLAG_LIST (FLAG_LIST_ASTERISK | FLAG_LIST_DASH)
+
 typedef enum {
   FLAG_BEGIN_LINE = 1 << 0,
   FLAG_ANCHOR_TEXT = 1 << 1,
   FLAG_ANCHOR_LINK = 1 << 2,
+  FLAG_LIST_ASTERISK = 1 << 3,
+  FLAG_LIST_DASH = 1 << 4,
 } flags_t;
 
 static inline void
@@ -21,6 +25,32 @@ skip_whitespace(cmark_ctx_t *ctx)
     default:
       return;
     }
+  }
+}
+
+static inline flags_t
+list_flag_from_char(char c)
+{
+  switch (c) {
+  case '*':
+    return FLAG_LIST_ASTERISK;
+  case '-':
+    return FLAG_LIST_DASH;
+  default:
+    return 0;
+  }
+}
+
+static inline char
+list_char_from_flag(flags_t flag)
+{
+  switch (flag) {
+  case FLAG_LIST_ASTERISK:
+    return '*';
+  case FLAG_LIST_DASH:
+    return '-';
+  default:
+    return '\0';
   }
 }
 
@@ -140,12 +170,29 @@ cmark_next(cmark_ctx_t *ctx)
   }
 
   if (HAS_FLAG(ctx, FLAG_BEGIN_LINE)) {
+    if (0 != (ctx->flags & MASK_FLAG_LIST) && ctx->src[ctx->i] != list_char_from_flag(ctx->flags & MASK_FLAG_LIST)) {
+      ctx->flags &= ~MASK_FLAG_LIST;
+      e.type = CMARK_ELEM_LIST_END;
+      return e;
+    }
+
     ctx->flags &= ~FLAG_BEGIN_LINE;
 
     switch (ctx->src[ctx->i]) {
     case '#':
       e.type = CMARK_ELEM_HEADING;
       e.heading = parse_heading(ctx);
+      return e;
+    case '*':
+    case '-':
+      if (0 != (ctx->flags & MASK_FLAG_LIST)) {
+        ctx->i++;
+        e.type = CMARK_ELEM_LIST_ITEM;
+      } else {
+        ctx->flags = ctx->flags | FLAG_BEGIN_LINE | list_flag_from_char(ctx->src[ctx->i]);
+        e.type = CMARK_ELEM_LIST_START;
+        e.list_start =  ctx->src[ctx->i];
+      }
       return e;
     default:
       break;
