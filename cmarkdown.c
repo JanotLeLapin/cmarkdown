@@ -3,8 +3,9 @@
 #define HAS_FLAG(ctx, flag) ((ctx->flags & flag) == flag)
 
 typedef enum {
-  FLAG_ANCHOR_TEXT = 1 << 0,
-  FLAG_ANCHOR_LINK = 1 << 1,
+  FLAG_BEGIN_LINE = 1 << 0,
+  FLAG_ANCHOR_TEXT = 1 << 1,
+  FLAG_ANCHOR_LINK = 1 << 2,
 } flags_t;
 
 static inline void
@@ -131,17 +132,27 @@ cmark_next(cmark_ctx_t *ctx)
     break;
   case '\n':
     ctx->i++;
+    ctx->flags |= FLAG_BEGIN_LINE;
     e.type = CMARK_ELEM_BREAK;
     return e;
   default:
     break;
   }
 
+  if (HAS_FLAG(ctx, FLAG_BEGIN_LINE)) {
+    ctx->flags &= ~FLAG_BEGIN_LINE;
+
+    switch (ctx->src[ctx->i]) {
+    case '#':
+      e.type = CMARK_ELEM_HEADING;
+      e.heading = parse_heading(ctx);
+      return e;
+    default:
+      break;
+    }
+  }
+
   switch (ctx->src[ctx->i]) {
-  case '#':
-    e.type = CMARK_ELEM_HEADING;
-    e.heading = parse_heading(ctx);
-    break;
   case '[':
     if (HAS_FLAG(ctx, FLAG_ANCHOR_TEXT) || is_anchor(ctx)) {
       ctx->i++;
@@ -166,6 +177,8 @@ cmark_next(cmark_ctx_t *ctx)
     e.plain = parse_plain(ctx);
     break;
   }
+
+  ctx->flags &= ~FLAG_BEGIN_LINE;
 
   return e;
 }
