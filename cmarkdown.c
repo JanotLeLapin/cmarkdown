@@ -141,33 +141,31 @@ cmark_next(cmark_ctx_t *ctx)
   case '#':
     e.type = CMARK_ELEM_HEADING;
     e.heading = parse_heading(ctx);
-    return e;
+    break;
   case '[':
     if (HAS_FLAG(ctx, FLAG_ANCHOR_TEXT) || is_anchor(ctx)) {
       ctx->i++;
       e.type = CMARK_ELEM_ANCHOR_TEXT;
-      return e;
     } else {
       e.type = CMARK_ELEM_PLAIN;
       e.plain = parse_plain(ctx);
-      return e;
     }
+    break;
   case '(':
     if (HAS_FLAG(ctx, FLAG_ANCHOR_LINK)) {
       ctx->flags &= ~FLAG_ANCHOR_LINK;
       e.type = CMARK_ELEM_ANCHOR_LINK;
       e.anchor_link = parse_anchor_link(ctx);
-      return e;
     } else {
       e.type = CMARK_ELEM_PLAIN;
       e.plain = parse_plain(ctx);
-      return e;
     }
+    break;
   default:
     e.type = CMARK_ELEM_PLAIN;
     e.plain = parse_plain(ctx);
-    return e;
+    break;
   }
 
-  return (cmark_elem_t) { .type = CMARK_ELEM_EOF };
+  return e;
 }
