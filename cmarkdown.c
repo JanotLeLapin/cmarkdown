@@ -175,7 +175,12 @@ cmark_next(cmark_ctx_t *ctx)
   case '\n':
     ctx->flags |= FLAG_BEGIN_LINE;
     if (parse_break(ctx)) {
-      e.type = CMARK_ELEM_BREAK;
+      if (0 != (ctx->flags & MASK_FLAG_LIST)) {
+        ctx->flags &= ~MASK_FLAG_LIST;
+        e.type = CMARK_ELEM_LIST_END;
+      } else {
+        e.type = CMARK_ELEM_BREAK;
+      }
       return e;
     }
     break;
