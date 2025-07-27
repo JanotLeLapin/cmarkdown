@@ -213,7 +213,7 @@ parse_code_inline(cmark_ctx_t *ctx)
 }
 
 static inline cmark_elem_code_multiline_data_t
-parse_code_multilne(cmark_ctx_t *ctx)
+parse_code_multiline(cmark_ctx_t *ctx)
 {
   cmark_elem_code_multiline_data_t data;
 
@@ -337,7 +337,7 @@ cmark_next(cmark_ctx_t *ctx)
     if (HAS_FLAG(ctx, FLAG_CODE_MULTILINE) || is_code_multiline(ctx)) {
       ctx->flags &= ~FLAG_CODE_MULTILINE;
       e.type = CMARK_ELEM_CODE_MULTILINE;
-      e.code_multiline = parse_code_multilne(ctx);
+      e.code_multiline = parse_code_multiline(ctx);
     } else if (HAS_FLAG(ctx, FLAG_CODE_INLINE) || is_code_inline(ctx)) {
       ctx->flags &= ~FLAG_CODE_INLINE;
       e.type = CMARK_ELEM_CODE_INLINE;
