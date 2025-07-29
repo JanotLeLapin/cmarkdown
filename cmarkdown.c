@@ -321,6 +321,7 @@ cmark_next(cmark_ctx_t *ctx)
   case '[':
     if (HAS_FLAG(ctx, FLAG_ANCHOR) || is_anchor(ctx)) {
       ctx->i++;
+      ctx->flags |= FLAG_ANCHOR;
       e.type = CMARK_ELEM_ANCHOR_TEXT;
     } else {
       e.type = CMARK_ELEM_PLAIN;
