@@ -1,15 +1,14 @@
-{ gcc
-, stdenv
+{ stdenv
 }: stdenv.mkDerivation {
   pname = "cmarkdown";
   version = "0.1";
 
-  buildInputs = [ gcc ];
+  buildInputs = [];
   src = ./.;
 
   buildPhase = ''
-    gcc -c cmarkdown.c -o cmarkdown.o
-    gcc -shared -o libcmarkdown.so cmarkdown.o
+    $CC -c cmarkdown.c -o cmarkdown.o
+    $CC -shared -o libcmarkdown.so cmarkdown.o
   '';
   installPhase = ''
     mkdir -p $out/lib

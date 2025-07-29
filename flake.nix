@@ -11,6 +11,10 @@
     }));
   in {
     devShells = eachSystem ({ pkgs, ... }: { default = pkgs.callPackage ./shell.nix {}; });
-    packages = eachSystem ({ pkgs, ... }: { default = pkgs.callPackage ./default.nix {}; });
+    packages = eachSystem ({ pkgs, ... }: rec {
+      glibc = pkgs.callPackage ./default.nix {};
+      musl = pkgs.pkgsMusl.callPackage ./default.nix {};
+      default = glibc;
+    });
   };
 }
