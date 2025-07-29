@@ -50,6 +50,15 @@ typedef struct {
   };
 } cmark_elem_t;
 
+static inline void
+cmark_init_ctx(cmark_ctx_t *ctx, const char *src, size_t len)
+{
+  ctx->src = src;
+  ctx->len = len;
+  ctx->i = 0;
+  ctx->flags = 1;
+}
+
 cmark_elem_t cmark_next(cmark_ctx_t *ctx);
 
 #endif
