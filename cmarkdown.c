@@ -283,7 +283,12 @@ cmark_next(cmark_ctx_t *ctx)
   }
 
   if (ctx->i >= ctx->len) {
-    e.type = CMARK_ELEM_EOF;
+    if (0 != (ctx->flags & MASK_FLAG_LIST)) {
+      ctx->flags &= ~MASK_FLAG_LIST;
+      e.type = CMARK_ELEM_LIST_END;
+    } else {
+      e.type = CMARK_ELEM_EOF;
+    }
     return e;
   }
 
