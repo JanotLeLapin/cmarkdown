@@ -282,6 +282,11 @@ cmark_next(cmark_ctx_t *ctx)
     break;
   }
 
+  if (ctx->i >= ctx->len) {
+    e.type = CMARK_ELEM_EOF;
+    return e;
+  }
+
   if (HAS_FLAG(ctx, FLAG_BEGIN_LINE)) {
     if (0 != (ctx->flags & MASK_FLAG_LIST) && ctx->src[ctx->i] != list_char_from_flag(ctx->flags & MASK_FLAG_LIST)) {
       ctx->flags &= ~MASK_FLAG_LIST;
