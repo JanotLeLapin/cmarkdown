@@ -12,7 +12,6 @@ typedef enum {
   FLAG_LIST_ASTERISK = 1 << 2,
   FLAG_LIST_DASH = 1 << 3,
   FLAG_CODE_INLINE = 1 << 4,
-  FLAG_CODE_MULTILINE = 1 << 5,
 } flags_t;
 
 static inline void
@@ -167,11 +166,6 @@ parse_plain(cmark_ctx_t *ctx)
         break;
       }
     case '`':
-      if (is_code_multiline(ctx)) {
-        ctx->flags |= FLAG_CODE_MULTILINE;
-        str.len = ctx->src + ctx->i - str.p;
-        return str;
-      }
       if (is_code_inline(ctx)) {
         ctx->flags |= FLAG_CODE_INLINE;
         str.len = ctx->src + ctx->i - str.p;
@@ -309,6 +303,12 @@ cmark_next(cmark_ctx_t *ctx)
       e.heading = parse_heading(ctx);
       skip_whitespace(ctx);
       return e;
+    case '`':
+      if (is_code_multiline(ctx)) {
+        e.type = CMARK_ELEM_CODE_MULTILINE;
+        e.code_multiline = parse_code_multiline(ctx);
+        return e;
+      }
     case '*':
     case '-':
       if (0 != (ctx->flags & MASK_FLAG_LIST)) {
@@ -349,11 +349,7 @@ cmark_next(cmark_ctx_t *ctx)
     }
     break;
   case '`':
-    if (HAS_FLAG(ctx, FLAG_CODE_MULTILINE) || is_code_multiline(ctx)) {
-      ctx->flags &= ~FLAG_CODE_MULTILINE;
-      e.type = CMARK_ELEM_CODE_MULTILINE;
-      e.code_multiline = parse_code_multiline(ctx);
-    } else if (HAS_FLAG(ctx, FLAG_CODE_INLINE) || is_code_inline(ctx)) {
+    if (HAS_FLAG(ctx, FLAG_CODE_INLINE) || is_code_inline(ctx)) {
       ctx->flags &= ~FLAG_CODE_INLINE;
       e.type = CMARK_ELEM_CODE_INLINE;
       e.code_inline = parse_code_inline(ctx);

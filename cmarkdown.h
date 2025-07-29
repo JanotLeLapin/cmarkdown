@@ -17,13 +17,13 @@ typedef struct {
 
 typedef int cmark_elem_heading_data_t;
 typedef char cmark_elem_list_start_data_t;
-typedef cmark_str_t cmark_elem_plain_data_t;
-typedef cmark_str_t cmark_elem_anchor_link_data_t;
-typedef cmark_str_t cmark_elem_code_inline_data_t;
 typedef struct {
   cmark_str_t lang;
   cmark_str_t content;
 } cmark_elem_code_multiline_data_t;
+typedef cmark_str_t cmark_elem_plain_data_t;
+typedef cmark_str_t cmark_elem_anchor_link_data_t;
+typedef cmark_str_t cmark_elem_code_inline_data_t;
 
 typedef struct {
   enum {
@@ -31,12 +31,12 @@ typedef struct {
     CMARK_ELEM_LIST_START,
     CMARK_ELEM_LIST_ITEM,
     CMARK_ELEM_LIST_END,
+    CMARK_ELEM_CODE_MULTILINE,
 
     CMARK_ELEM_PLAIN,
     CMARK_ELEM_ANCHOR_TEXT,
     CMARK_ELEM_ANCHOR_LINK,
     CMARK_ELEM_CODE_INLINE,
-    CMARK_ELEM_CODE_MULTILINE,
     CMARK_ELEM_BREAK,
     CMARK_ELEM_EOF,
   } type;
