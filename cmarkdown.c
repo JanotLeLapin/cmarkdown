@@ -264,7 +264,9 @@ cmark_next(cmark_ctx_t *ctx)
   switch (ctx->src[ctx->i]) {
   case ' ':
   case '\t':
-    skip_whitespace(ctx);
+    if (HAS_FLAG(ctx, FLAG_BEGIN_LINE)) {
+      skip_whitespace(ctx);
+    }
     break;
   case '\n':
     ctx->flags |= FLAG_BEGIN_LINE;
@@ -305,12 +307,14 @@ cmark_next(cmark_ctx_t *ctx)
     case '#':
       e.type = CMARK_ELEM_HEADING;
       e.heading = parse_heading(ctx);
+      skip_whitespace(ctx);
       return e;
     case '*':
     case '-':
       if (0 != (ctx->flags & MASK_FLAG_LIST)) {
         ctx->i++;
         e.type = CMARK_ELEM_LIST_ITEM;
+        skip_whitespace(ctx);
       } else {
         ctx->flags = ctx->flags | FLAG_BEGIN_LINE | list_flag_from_char(ctx->src[ctx->i]);
         e.type = CMARK_ELEM_LIST_START;
